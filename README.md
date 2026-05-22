@@ -103,18 +103,6 @@ flowchart LR
 | 9 | **Nút bấm** | Xác nhận / fail-safe khi mất mạng |
 | 10 | **Hộp nhựa + vách Mica** | Cơ khí, ngăn thuốc / ngăn mạch |
 
-### Dự toán chi phí bổ sung (ước tính)
-
-| Hạng mục | Chi phí (VND) |
-|----------|----------------|
-| Servo SG90 | ~30.000 |
-| Loadcell 1 kg + HX711 | ~10.000 |
-| RTC DS3231 | ~40.000 |
-| Linh kiện phụ (Buzzer, vỏ hộp, Mica…) | ~20.000 |
-| **Tổng phát sinh** | **~185.000** |
-
-*Chưa tính ESP32, OLED, DHT11, nút bấm đã có trong kit học phần.*
-
 ---
 
 ## Sơ đồ chân ESP32
@@ -241,25 +229,6 @@ Hướng nghiên cứu cho học phần tiếp theo (không nằm trong scope fi
 | **Kiểm soát truy cập** | TLS trên ESP32; nút cơ học fail-safe khi mất mạng |
 | **Quyền riêng tư** | Dữ liệu tuân thủ uống thuốc — nhạy cảm (Nghị định 13/2023/NĐ-CP) |
 | **Trách nhiệm** | Sai số Loadcell → hậu quả sức khỏe; retention policy |
-
----
-
-## Nhóm thực hiện
-
-**Chương trình:** Master M1 ICT  
-**Học phần:** From Sensor to User  
-**Quy mô nhóm:** 5 thành viên
-
-| Vai trò | Thành viên | Ghi chú |
-|---------|------------|---------|
-| | | Cập nhật tên / MSSV / vai trò khi nhóm chốt phân công |
-
----
-
-## Tài liệu nội bộ
-
-- Báo cáo ý tưởng, thiết kế chi tiết, bảng ngân sách: `project_context.md` (lưu **local**, không commit — xem `.gitignore`).
-- Chỉ **`README.md`** được đẩy lên git trong các file Markdown để tránh conflict khi nhiều người chỉnh tài liệu.
 
 ---
 
