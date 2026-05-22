@@ -1,0 +1,3 @@
+# Markdown nội bộ nhóm — chỉ đẩy README.md lên git để tránh conflict
+*.md
+!README.md
