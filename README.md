@@ -15,10 +15,7 @@
 - [Lắp ráp cơ khí](#lắp-ráp-cơ-khí)
 - [Phần mềm & cấu trúc repo](#phần-mềm--cấu-trúc-repo)
 - [Cài đặt & chạy thử](#cài-đặt--chạy-thử)
-- [Kế hoạch triển khai](#kế-hoạch-triển-khai)
 - [An ninh & đạo đức dữ liệu](#an-ninh--đạo-đức-dữ-liệu)
-- [Nhóm thực hiện](#nhóm-thực-hiện)
-- [Tài liệu nội bộ](#tài-liệu-nội-bộ)
 
 ---
 
