@@ -209,16 +209,6 @@ pio run
 
 ---
 
-## Kế hoạch triển khai
-
-| Giai đoạn | Thời gian | Nội dung |
-|-----------|-----------|----------|
-| **1** | Tuần 1–2 | Mua linh kiện; lắp cơ khí; calibrate Loadcell & RTC |
-| **2** | Tuần 3–4 | Logic Servo, Buzzer, IR, HX711; WiFi; MQTT/HTTP → Telegram/Dashboard (*From Sensor to User*) |
-| **3** | Học phần sau | TLS/SSL, phân tích MITM, PIA, chính sách lưu trữ dữ liệu (*Security and Ethics for Data*) |
-
----
-
 ## An ninh & đạo đức dữ liệu
 
 Hướng nghiên cứu cho học phần tiếp theo (không nằm trong scope firmware giai đoạn 2):
@@ -237,7 +227,3 @@ Hướng nghiên cứu cho học phần tiếp theo (không nằm trong scope fi
 Dự án học thuật — **không thay thế tư vấn y tế**. Sản phẩm prototype; cần hiệu chuẩn cân và kiểm thử trước khi dùng thực tế cho người bệnh.
 
 ---
-
-<p align="center">
-  <sub>SmartPilBox · Master M1 ICT · From Sensor to User</sub>
-</p>
