@@ -10,7 +10,6 @@
       "left": 120,
       "attrs": {}
     },
-
     {
       "type": "wokwi-breadboard",
       "id": "bb1",
@@ -18,7 +17,6 @@
       "left": -20,
       "attrs": {}
     },
-
     {
       "type": "wokwi-ds1307",
       "id": "rtc1",
@@ -26,7 +24,6 @@
       "left": 420,
       "attrs": {}
     },
-
     {
       "type": "wokwi-servo",
       "id": "servo1",
@@ -34,7 +31,6 @@
       "left": 420,
       "attrs": {}
     },
-
     {
       "type": "wokwi-buzzer",
       "id": "bz1",
@@ -44,20 +40,23 @@
         "volume": "0.1"
       }
     },
-
     {
-      "type": "wokwi-pushbutton",
-      "id": "btn1",
+      "type": "wokwi-slide-switch",
+      "id": "sw1",
       "top": 140,
-      "left": 560,
-      "rotate": 90,
+      "left": 580,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-hx711",
+      "id": "hx1",
+      "top": 320,
+      "left": 450,
       "attrs": {
-        "color": "green",
-        "xray": "1"
+        "type": "5kg"
       }
     }
   ],
-
   "connections": [
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
     [ "esp:RX", "$serialMonitor:TX", "", [] ],
@@ -77,9 +76,13 @@
     [ "bz1:1", "bb1:bn.15", "black", [ "v0" ] ],
     [ "bz1:2", "esp:19", "purple", [ "v0" ] ],
 
-    [ "btn1:1.l", "bb1:bn.20", "black", [ "v0" ] ],
-    [ "btn1:2.r", "esp:4", "green", [ "v0" ] ]
-  ],
+    [ "hx1:VCC", "bb1:bp.20", "red", [ "v0" ] ],
+    [ "hx1:GND", "bb1:bn.20", "black", [ "v0" ] ],
+    [ "hx1:DT", "esp:4", "green", [ "v0" ] ],
+    [ "hx1:SCK", "esp:5", "blue", [ "v0" ] ],
 
+    [ "sw1:2", "esp:23", "green", [ "v0" ] ],
+    [ "sw1:1", "bb1:bn.25", "black", [ "v0" ] ]
+  ],
   "dependencies": {}
 }

@@ -1,97 +1,26 @@
-#include <Wire.h>
-#include <RTClib.h>
-#include <ESP32Servo.h>
+#include <Arduino.h>
+#include "PilBox/PillBoxController.h"
+#include "MQTT/MQTTManager.h"
 
-RTC_DS1307 rtc;
+PillBoxController pillBox;
+MQTTManager mqttManager;
 
-#define SERVO_PIN 18
-#define BUZZER_PIN 19
-#define BUTTON_PIN 4
-
-Servo lockServo;
-
-bool alarmActive = false;
-bool medicineTaken = false;
-void triggerMedicineAlarm() {
-  alarmActive = true;
-  medicineTaken = false;
-
-  Serial.println("TIME TO TAKE MEDICINE");
-
-  // Unlock box
-  lockServo.write(90);
-
-  // Start buzzer
-  digitalWrite(BUZZER_PIN, HIGH);
-}
-
-void stopAlarm() {
-  alarmActive = false;
-
-  // Stop buzzer
-  digitalWrite(BUZZER_PIN, LOW);
-
-  // Lock box again
-  lockServo.write(0);
-
-  Serial.println("Box Locked");
+// Hàm callback khi nhận được cấu hình giờ mới từ MQTT Server (đã được Server tách sẵn hoặc bóc tách số)
+void onTimeConfigReceived(int hour, int minute) {
+    // Đẩy thẳng hai số nguyên giờ/phút vừa nhận vào bộ điều khiển trung tâm
+    pillBox.setAlarmTime(hour, minute); 
 }
 
 void setup() {
-  Serial.begin(115200);
-
-  // RTC
-  Wire.begin(21, 22);
-
-  if (!rtc.begin()) {
-    Serial.println("RTC not found");
-    while (1);
-  }
-
-  // Set RTC time once
-  // Uncomment this line ONCE then upload
-  // rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-
-  // Servo
-  lockServo.attach(SERVO_PIN);
-
-  // Locked position
-  lockServo.write(0);
-
-  // Buzzer
-  pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, LOW);
-
-  // Button
-  pinMode(BUTTON_PIN, INPUT_PULLUP);
-
-  Serial.println("System Ready");
+    pillBox.begin();
+    
+    // Khởi tạo mạng MQTT (Điền thông tin mạng và IP Mosquitto máy tính của bạn)
+    mqttManager.begin("Ten_WiFi", "Mat_Khau", "192.168.1.15", 1883);
+    mqttManager.setOnTimeUpdate(onTimeConfigReceived);
 }
 
 void loop() {
-  DateTime now = rtc.now();
-
-  Serial.print(now.hour());
-  Serial.print(":");
-  Serial.print(now.minute());
-  Serial.print(":");
-  Serial.println(now.second());
-
-  // TEST ALARM
-  // Trigger every minute at second 10
-  if (now.second() == 10 && !alarmActive) {
-    triggerMedicineAlarm();
-  }
-
-  // Button pressed
-  if (alarmActive && digitalRead(BUTTON_PIN) == LOW) {
-    medicineTaken = true;
-
-    Serial.println("Medicine Taken");
-
-    stopAlarm();
-  }
-
-  delay(200);
+    mqttManager.update(); // Duy trì kết nối mạng nhận lệnh cài giờ hằng ngày
+    pillBox.update();     // Chạy máy trạng thái FSM lõi phần cứng của hộp thuốc
+    delay(10);
 }
-
