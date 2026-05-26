@@ -9,6 +9,7 @@
 - [Tổng quan](#tổng-quan)
 - [Vấn đề & giải pháp](#vấn-đề--giải-pháp)
 - [Kiến trúc hệ thống](#kiến-trúc-hệ-thống)
+- [Ứng dụng người dùng (Prototype MVP)](#ứng-dụng-người-dùng-prototype-mvp)
 - [Phần cứng](#phần-cứng)
 - [Sơ đồ chân ESP32](#sơ-đồ-chân-esp32)
 - [Luồng vận hành](#luồng-vận-hành)
@@ -82,6 +83,178 @@ flowchart LR
 **Luồng dữ liệu (*From Sensor to User*):** Cảm biến → ESP32 (xử lý & quyết định) → mạng → Cloud → Dashboard / Telegram cho người giám hộ.
 
 ---
+
+## Ứng dụng người dùng (Prototype MVP)
+
+Trong giai đoạn prototype (1–2 tuần), ứng dụng chỉ tập trung vào các chức năng tối thiểu để chứng minh hệ thống SmartPilBox hoạt động hoàn chỉnh.
+
+Mục tiêu chính:
+- cài lịch uống thuốc,
+- gửi lịch sang ESP32 qua MQTT,
+- nhận trạng thái realtime từ ESP32,
+- hiển thị người dùng đã uống thuốc hay chưa.
+
+Hệ thống sử dụng MQTT để giao tiếp realtime giữa ứng dụng và ESP32.
+
+---
+
+### Kiến trúc hệ thống
+
+```mermaid
+flowchart LR
+  MobileApp --> MQTT[(MQTT Broker)]
+  MQTT --> ESP32
+  ESP32 --> MQTT
+  MQTT --> MobileApp
+```
+
+### Luồng hoạt động
+
+1. Người dùng nhập giờ uống thuốc trên app.
+2. App publish thời gian lên MQTT Broker.
+3. ESP32 subscribe và cập nhật lịch uống thuốc.
+4. Khi đến giờ:
+   - buzzer reo,
+   - servo mở khóa.
+5. Sau khi xác nhận uống thuốc:
+   - ESP32 publish trạng thái lên MQTT.
+6. App nhận dữ liệu realtime và cập nhật giao diện.
+
+---
+
+### Chức năng chính của app
+
+#### 1. Đặt lịch uống thuốc
+
+Người dùng nhập:
+- giờ,
+- phút uống thuốc.
+
+App publish MQTT message:
+
+Topic:
+
+```text
+pillbox/hour
+```
+
+Payload ví dụ:
+
+```text
+8
+```
+
+và:
+
+Topic:
+
+```text
+pillbox/minute
+```
+
+Payload ví dụ:
+
+```text
+30
+```
+
+ESP32 sẽ cập nhật lịch thành:
+
+```text
+08:30
+```
+
+---
+
+#### 2. Xem trạng thái hộp thuốc
+
+ESP32 publish trạng thái realtime lên:
+
+Topic:
+
+```text
+pillbox/status
+```
+
+Ví dụ payload:
+
+```text
+Medicine Taken
+```
+
+hoặc:
+
+```text
+Waiting for User
+```
+
+App hiển thị trạng thái đơn giản:
+
+```text
+SMARTPILBOX
+
+Schedule: 08:30
+
+Current Status:
+✓ Medicine Taken
+```
+
+---
+
+#### 3. Cảnh báo đơn giản
+
+Nếu:
+- đến giờ nhưng chưa uống thuốc,
+- hoặc mở hộp nhưng không có thay đổi khối lượng,
+
+ESP32 sẽ publish trạng thái cảnh báo.
+
+Ví dụ:
+
+```text
+Medicine Not Taken
+```
+
+App hiển thị cảnh báo màu đỏ hoặc popup đơn giản.
+
+---
+
+### MQTT Topics
+
+| Topic | Publisher | Subscriber | Mục đích |
+|-------|------------|-------------|----------|
+| `pillbox/hour` | Mobile App | ESP32 | Gửi giờ uống thuốc |
+| `pillbox/minute` | Mobile App | ESP32 | Gửi phút uống thuốc |
+| `pillbox/status` | ESP32 | Mobile App | Gửi trạng thái hộp thuốc |
+
+---
+
+### Công nghệ đề xuất
+
+| Thành phần | Gợi ý |
+|------------|------|
+| Mobile App | Flutter |
+| MQTT Client | mqtt_client package |
+| MQTT Broker | Mosquitto / EMQX / HiveMQ |
+
+---
+
+### Scope prototype
+
+Prototype chỉ cần:
+- 1 thiết bị,
+- 1 người dùng,
+- realtime MQTT,
+- không cần database,
+- không cần authentication,
+- không cần backend server riêng.
+
+Mục tiêu chính:
+- chứng minh luồng IoT realtime hoạt động hoàn chỉnh từ:
+
+```text
+Sensor → ESP32 → MQTT → Mobile App
+```
 
 ## Phần cứng
 
