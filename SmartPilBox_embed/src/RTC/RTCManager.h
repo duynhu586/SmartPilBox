@@ -17,6 +17,9 @@ public:
     // Hàm check giờ uống thuốc (kiểm tra theo biến động)
     bool isItMedicineTime();
 
+    void adjust(const DateTime& dt);
+    bool lostPower();
+
 private:
     RTC_DS3231 rtc; // Hoặc RTC_DS1307 tùy mạch của bạn
     int alarmHour = -1;   // Mặc định -1 là chưa cài giờ

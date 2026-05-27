@@ -27,6 +27,21 @@
 #define SCHEDULE_HOUR               16      // Scheduled Hour (0-23)
 #define SCHEDULE_MINUTE             48      // Scheduled Minute (0-59)
 
+#define BUZZER_BEEP_INTERVAL 500
+
+// ====================================================================
+// --- THÊM TẠI ĐÂY: Cấu hình Mạng & MQTT ---
+// ====================================================================
+#define WIFI_SSID         "Le Nhung 1"
+#define WIFI_PASSWORD     "123456Sas"
+#define MQTT_BROKER_IP    "192.168.1.3"
+#define MQTT_PORT         1883
+
+#define BUZZER_FREQUENCY 800   // Giảm từ 2000 xuống 800Hz → nhỏ hơn
+#define BUZZER_BEEP_INTERVAL 500 // Thời gian giữa các lần reo chuông (ms)
+#define ALARM_RINGING_TIMEOUT       1000   // Thời gian reo chuông trước khi mở hộp (ms)
+#define WEIGHT_STABILIZATION_TIME   1500   // Thời gian chờ cân ổn định để xác định (ms)
+
 // --- State Machine Declarations ---
 enum PillBoxState {
     IDLE,

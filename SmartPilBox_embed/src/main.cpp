@@ -1,26 +1,23 @@
 #include <Arduino.h>
 #include "PilBox/PillBoxController.h"
-#include "MQTT/MQTTManager.h"
 
-PillBoxController pillBox;
-MQTTManager mqttManager;
-
-// Hàm callback khi nhận được cấu hình giờ mới từ MQTT Server (đã được Server tách sẵn hoặc bóc tách số)
-void onTimeConfigReceived(int hour, int minute) {
-    // Đẩy thẳng hai số nguyên giờ/phút vừa nhận vào bộ điều khiển trung tâm
-    pillBox.setAlarmTime(hour, minute); 
-}
+// Khởi tạo đối tượng điều khiển toàn cục (Global Instance)
+// Việc để toàn cục giúp hàm Callback của MQTT (ở PillBoxController::begin) 
+// có thể tìm thấy và cập nhật lịch hẹn giờ động thông qua từ khóa 'extern'
+PillBoxController controller;
 
 void setup() {
-    pillBox.begin();
+    // Cấu hình ban đầu cho toàn bộ hệ thống hộp thuốc
+    // Hàm này sẽ tự động thiết lập chân Pin, cấu hình RTC, Cân HX711, Servo, Buzzer, IR
+    // và kích hoạt chế độ tiết kiệm điện mặc định cho các linh kiện ngoại vi.
+    controller.begin();
     
-    // Khởi tạo mạng MQTT (Điền thông tin mạng và IP Mosquitto máy tính của bạn)
-    mqttManager.begin("Ten_WiFi", "Mat_Khau", "192.168.1.15", 1883);
-    mqttManager.setOnTimeUpdate(onTimeConfigReceived);
+    Serial.println("[MAIN] Setup completed. State Machine enters IDLE core loop.");
 }
 
 void loop() {
-    mqttManager.update(); // Duy trì kết nối mạng nhận lệnh cài giờ hằng ngày
-    pillBox.update();     // Chạy máy trạng thái FSM lõi phần cứng của hộp thuốc
-    delay(10);
+    // Chạy liên tục bộ điều khiển trạng thái (Finite State Machine)
+    // - Khi ở trạng thái IDLE: Hàm này tự động gọi Light Sleep 500ms để tiết kiệm pin.
+    // - Khi đến giờ hẹn: Tự động đánh thức hệ thống để reo chuông, kiểm tra cân nặng và an toàn IR.
+    controller.update();
 }

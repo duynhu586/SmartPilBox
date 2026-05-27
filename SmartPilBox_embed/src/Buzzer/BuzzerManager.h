@@ -1,3 +1,4 @@
+// BuzzerManager.h - Bỏ buzzerChannel
 #ifndef BUZZER_MANAGER_H
 #define BUZZER_MANAGER_H
 
@@ -12,6 +13,7 @@ public:
     void update();
 private:
     int buzzerPin;
+    // ❌ Xóa: int buzzerChannel
     bool isBeeping;
     bool buzzerState;
     unsigned long lastToggleTime;

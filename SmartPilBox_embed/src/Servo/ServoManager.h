@@ -9,9 +9,12 @@ public:
     void begin(int pin);
     void lock();
     void open();
+    void attach();
+    void detach();
 private:
     Servo myServo;
     int servoPin;
+    int currentAngle;
 };
 
 #endif

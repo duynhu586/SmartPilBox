@@ -9,8 +9,12 @@ public:
     void begin(int doutPin, int sckPin);
     float getWeight();
     void tare();
+
+    void powerDown();
+    void powerUp();
 private:
     HX711 scale;
+    long tareOffset;
 };
 
 #endif

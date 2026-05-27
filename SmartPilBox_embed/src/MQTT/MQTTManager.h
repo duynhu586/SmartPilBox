@@ -13,6 +13,7 @@ public:
     void update();
     void setOnTimeUpdate(TimeUpdateCallback cb);
     void publishStatus(const char* message);
+    bool connected() { return client.connected(); }
 
 private:
     WiFiClient espClient;
@@ -20,20 +21,21 @@ private:
     const char* _brokerIp;
     int _port;
     
-    // Đăng ký nghe cả 2 topic riêng biệt từ Server
     const char* _topicHour = "pillbox/set_hour";
     const char* _topicMinute = "pillbox/set_minute";
     
     TimeUpdateCallback _timeCb = nullptr;
 
-    // THÊM BIẾN NÀY ĐỂ HẾT LỖI: Lưu tạm giờ trước khi ghép với phút
     int _currentHour = 0; 
+    int _currentMinute = 0;                // <-- THÊM: Lưu tạm phút
+    volatile bool _hasNewSchedule = false; // <-- THÊM: Cờ hiệu báo có lịch mới
 
     void reconnect();
     static void mqttCallback(char* topic, byte* payload, unsigned int length);
     static MQTTManager* _instance;
 
-    
+    unsigned long lastReconnectAttempt;
+    bool reconnectNonBlocking(); 
 };
 
 #endif

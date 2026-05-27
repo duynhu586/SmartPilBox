@@ -1,27 +1,31 @@
+// BuzzerManager.cpp - Viết lại cho passive buzzer
 #include "BuzzerManager.h"
 #include "Config.h"
 
-BuzzerManager::BuzzerManager() : buzzerPin(-1), isBeeping(false), buzzerState(false), lastToggleTime(0) {}
+BuzzerManager::BuzzerManager()
+    : buzzerPin(-1),
+      isBeeping(false),
+      buzzerState(false),
+      lastToggleTime(0) {}
 
 void BuzzerManager::begin(int pin) {
     buzzerPin = pin;
     pinMode(buzzerPin, OUTPUT);
-    digitalWrite(buzzerPin, LOW);
+    noTone(buzzerPin); // Đảm bảo tắt ngay khi khởi động
 }
 
 void BuzzerManager::startBeeping() {
     if (!isBeeping) {
         isBeeping = true;
+        buzzerState = false;
         lastToggleTime = millis();
-        buzzerState = true;
-        digitalWrite(buzzerPin, HIGH);
     }
 }
 
 void BuzzerManager::stopBeeping() {
     isBeeping = false;
     buzzerState = false;
-    digitalWrite(buzzerPin, LOW);
+    noTone(buzzerPin); // ← Dùng noTone() thay vì ledcWriteTone()
 }
 
 void BuzzerManager::update() {
@@ -30,7 +34,11 @@ void BuzzerManager::update() {
     unsigned long currentTime = millis();
     if (currentTime - lastToggleTime >= BUZZER_BEEP_INTERVAL) {
         buzzerState = !buzzerState;
-        digitalWrite(buzzerPin, buzzerState ? HIGH : LOW);
+        if (buzzerState) {
+            tone(buzzerPin, BUZZER_FREQUENCY); // ← Dùng tone() thay vì ledcWriteTone()
+        } else {
+            noTone(buzzerPin);
+        }
         lastToggleTime = currentTime;
     }
 }

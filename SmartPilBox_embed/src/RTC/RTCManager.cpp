@@ -35,8 +35,16 @@ bool RTCManager::isItMedicineTime() {
     DateTime now = rtc.now();
     
     // So khớp với giờ động được cài qua MQTT
-    if (now.hour() == alarmHour && now.minute() == alarmMinute && now.second() == 0) {
+    if (now.hour() == alarmHour && now.minute() == alarmMinute ) {
         return true; 
     }
     return false;
+}
+
+void RTCManager::adjust(const DateTime& dt) {
+    rtc.adjust(dt);
+}
+
+bool RTCManager::lostPower() {
+    return rtc.lostPower(); // DS1307 không có lostPower(), dùng isrunning() thay thế
 }
