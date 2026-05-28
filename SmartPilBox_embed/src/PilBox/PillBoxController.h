@@ -16,6 +16,8 @@ public:
     void update();
     const char* getStateString(PillBoxState state);
     void setAlarmTime(int hour, int minute);
+    // In your .h, add:
+    bool boxOpenInitialized = false;
 
 private:
     PillBoxState currentState;

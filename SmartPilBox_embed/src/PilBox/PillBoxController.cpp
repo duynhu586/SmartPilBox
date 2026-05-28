@@ -1,8 +1,5 @@
 #include "PillBoxController.h"
 #include <Arduino.h>
-#include "esp_sleep.h" // Thư viện lõi điều khiển ngủ Sleep của ESP32
-#include "esp_wifi.h" // <-- THÊM THƯ VIỆN NÀY
-#include "esp_pm.h" // <-- THÊM THƯ VIỆN QUẢN LÝ NĂNG LƯỢNG (Power Management) CỦA ESP32
 
 // Khởi tạo mặc định lấy giá trị gốc từ Config.h làm mốc dự phòng ban đầu
 PillBoxController::PillBoxController() : 
@@ -25,18 +22,7 @@ void PillBoxController::begin() {
     // ================================================================
     // BẮT ĐẦU CHÈN CODE CẤU HÌNH TIẾT KIỆM PIN TỰ ĐỘNG TẠI ĐÂY
     // ================================================================
-    #if CONFIG_PM_ENABLE
-    esp_pm_config_esp32_t pm_config = {
-        .max_freq_mhz = 240,
-        .min_freq_mhz = 40,        // CPU giảm tốc xuống 40MHz khi rảnh để tiết kiệm điện
-        .light_sleep_enable = true // Tự động light sleep đồng bộ với chu kỳ beacon của WiFi
-    };
-    if (esp_pm_configure(&pm_config) == ESP_OK) {
-        Serial.println("[POWER] Auto Light Sleep Mode Configured Successfully.");
-    } else {
-        Serial.println("[POWER] Failed to configure Auto Light Sleep.");
-    }
-    #endif
+    
     // ================================================================
 
     Wire.begin(RTC_SDA_PIN, RTC_SCL_PIN);
@@ -63,6 +49,21 @@ void PillBoxController::begin() {
 
     // [QUẢN LÝ NGUỒN]: Đọc tải trọng ban đầu xong ép chip cân HX711 đi ngủ lập tức
     loadCellManager.begin(HX711_DOUT_PIN, HX711_SCK_PIN);
+    delay(500);
+
+    // warm up samples
+    for(int i = 0; i < 5; i++) {
+        loadCellManager.getWeight();
+        delay(50);
+    }
+
+    float startupWeight = loadCellManager.getWeight();
+
+    Serial.printf(
+        "[CELL] Startup weight reading: %.2f g\n",
+        startupWeight
+    );
+
     loadCellManager.powerDown(); 
     Serial.println("[OK] HX711 Load Cell Driver Initialized & Powered Down.");
 
@@ -129,6 +130,20 @@ void PillBoxController::update() {
                 Serial.print("[RTC] System Clock Stamp: ");
                 Serial.println(rtcManager.getTimeString());
 
+                // [QUẢN LÝ NGUỒN]: Cấp lại năng lượng và tín hiệu PWM điều khiển Servo
+                servoManager.attach();
+                delay(200); // Let PWM timer stabilize before any write
+                servoManager.open();
+                Serial.println("[MECHANISM] Container hatch latch unlocked.");
+
+                delay(800); // đợi servo quay xong
+
+                // servoManager.detach();
+
+                Serial.println("[POWER] Servo detached after unlock.");
+
+                delay(500); // cho nguồn + HX711 ổn định lại
+
                 // [QUẢN LÝ NGUỒN]: Đánh thức cảm biến lực cân khi bắt đầu chu trình kiểm tra lịch
                 loadCellManager.powerUp();
                 delay(500); // Chờ điện áp IC ổn định sau khi thức dậy
@@ -136,13 +151,14 @@ void PillBoxController::update() {
                 beforeWeight = loadCellManager.getWeight();
                 Serial.printf("[CELL] Pre-ingestion weight base: %.2f g\n", beforeWeight);
 
-                // [QUẢN LÝ NGUỒN]: Cấp lại năng lượng và tín hiệu PWM điều khiển Servo
-                servoManager.attach();
-                servoManager.open();
-                Serial.println("[MECHANISM] Container hatch latch unlocked.");
-
-                buzzerManager.startBeeping();
+                
                 Serial.println("[ALARM] Transmitting auditory loop signal.");
+
+                loadCellManager.powerDown();
+
+                // buzzerManager.startBeeping();
+                irSensorManager.powerOn();
+                Serial.println("[ALARM] Transmitting auditory loop signal & IR ON.");
 
                 scheduleTriggeredToday = true;
                 currentState = ALARM_RINGING;
@@ -157,17 +173,31 @@ void PillBoxController::update() {
             break;
 
         case ALARM_RINGING:
-            if (millis() - stateTimer >= ALARM_RINGING_TIMEOUT) {
+           if (irSensorManager.isObstacleDetected() == false || (millis() - stateTimer >= ALARM_RINGING_TIMEOUT)) {
+                Serial.println("[FSM] Lid opened detected via IR or Timeout. Moving to BOX_OPEN.");
                 currentState = BOX_OPEN;
             }
             break;
 
         case BOX_OPEN:
+            if (!boxOpenInitialized) {
+                buzzerManager.stopBeeping();
+                irSensorManager.powerOff();
+                loadCellManager.powerUp();
+                delay(500);
+                boxOpenInitialized = true;
+            }  
+
             {
                 float currentWeight = loadCellManager.getWeight();
+                Serial.printf(
+                "[DEBUG] before=%.2f current=%.2f delta=%.2f\n",
+                beforeWeight,
+                currentWeight,
+                beforeWeight - currentWeight
+            );
                 if (beforeWeight - currentWeight >= CONTAINER_REMOVED_THRESHOLD) {
                     Serial.println("[LOG] Container removed from platform scale.");
-                    buzzerManager.stopBeeping();
                     currentState = WAIT_FOR_RETURN;
                 }
             }
@@ -202,7 +232,7 @@ void PillBoxController::update() {
                     currentState = BOX_CLOSING;
                 } else {
                     Serial.println("[WARN] Failure: Container replaced without safe consumption variance.");
-                    buzzerManager.startBeeping(); 
+                    // buzzerManager.startBeeping(); 
                     currentState = BOX_OPEN;
                 }
             }

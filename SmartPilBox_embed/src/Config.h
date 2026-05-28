@@ -13,7 +13,7 @@
 
 // --- System Thresholds & Constants ---
 #define HX711_CALIBRATION_FACTOR    420.0  // Custom load cell scaling factor
-#define MEDICINE_WEIGHT_THRESHOLD   5.0    // Required delta mass reduction (grams) to pass verification
+#define MEDICINE_WEIGHT_THRESHOLD   2       // Required delta mass reduction (grams) to pass verification
 #define CONTAINER_REMOVED_THRESHOLD 15.0   // Delta reduction (grams) signifying container displacement
 
 // --- Servo Angle Parameters ---
@@ -32,9 +32,9 @@
 // ====================================================================
 // --- THÊM TẠI ĐÂY: Cấu hình Mạng & MQTT ---
 // ====================================================================
-#define WIFI_SSID         "Le Nhung 1"
-#define WIFI_PASSWORD     "123456Sas"
-#define MQTT_BROKER_IP    "192.168.1.3"
+#define WIFI_SSID         "USTH_Student"
+#define WIFI_PASSWORD     "usth2021!"
+#define MQTT_BROKER_IP    "10.10.15.92"
 #define MQTT_PORT         1883
 
 #define BUZZER_FREQUENCY 800   // Giảm từ 2000 xuống 800Hz → nhỏ hơn

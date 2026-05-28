@@ -3,7 +3,7 @@ import time
 
 # --- CẤU HÌNH ---
 # Giữ nguyên IP hiện tại của bạn
-MQTT_BROKER = "192.168.1.3" 
+MQTT_BROKER = "10.10.15.92" 
 MQTT_PORT = 1883
 
 # THAY ĐỔI: Tách thành 2 topic riêng biệt như ESP32 đang chờ
