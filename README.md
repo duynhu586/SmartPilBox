@@ -52,36 +52,44 @@ Hệ thống (phiên bản code hiện tại) kết hợp:
 
 ```mermaid
 flowchart LR
+
   subgraph Device["Thiết bị ESP32"]
-    RTC[RTC DS1307]
-    LC[Loadcell + HX711]
-    IR[Cảm biến IR (safety)]
-    SRV[Servo khóa]
-    BZ[Buzzer]
-    WIFI[WiFi]
-    PM[Power mgmt (Auto light sleep)]
+    RTC["RTC DS1307"]
+    LC["Loadcell + HX711"]
+    IR["Cảm biến IR - safety"]
+    SRV["Servo khóa"]
+    BZ["Buzzer"]
+    WIFI["WiFi"]
+    PM["Power mgmt - Auto light sleep"]
+
+    CORE["ESP32 Core"]
   end
 
   subgraph Cloud["Cloud / Backend"]
-    MQTT[MQTT / HTTP]
-    DB[(Lưu trữ sự kiện)]
+    MQTT["MQTT / HTTP"]
+    DB[("Lưu trữ sự kiện")]
   end
 
   subgraph User["Người dùng cuối"]
-    DASH[Dashboard]
-    TG[Telegram Bot]
+    DASH["Dashboard"]
+    TG["Telegram Bot"]
   end
 
-  RTC --> Device
-  LC --> Device
-  IR --> Device
-  Device -->|WiFi| MQTT
+  RTC --> CORE
+  LC --> CORE
+  IR --> CORE
+
+  CORE --> SRV
+  CORE --> BZ
+
+  CORE -->|WiFi| MQTT
   MQTT --> DB
   DB --> DASH
   DB --> TG
 ```
 
-**Luồng dữ liệu (*From Sensor to User*):** Cảm biến → ESP32 (xử lý & quyết định) → mạng → Cloud → Dashboard / Telegram cho người giám hộ.
+**Luồng dữ liệu (*From Sensor to User*):**  
+Cảm biến → ESP32 (xử lý & quyết định) → mạng → Cloud → Dashboard / Telegram cho người giám hộ.
 
 ---
 
