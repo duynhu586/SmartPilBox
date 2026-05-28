@@ -24,15 +24,16 @@
 
 **SmartPilBox** (Smart Pillbox / Medication Tracker) là hộp đựng thuốc IoT giúp người cao tuổi uống thuốc đúng giờ, đúng liều, đồng thời cho phép người thân hoặc nhân viên y tế **giám sát từ xa** qua dữ liệu cảm biến thời gian thực.
 
-Hệ thống kết hợp:
+Hệ thống (phiên bản code hiện tại) kết hợp:
 
 - **Khóa cơ học** (Servo) — chỉ mở nắp khi đến giờ, hạn chế uống quá liều hoặc trẻ em mở nhầm
-- **Cân tải trọng** (Loadcell + HX711) — xác nhận thuốc đã được lấy ra
-- **Cảm biến hồng ngoại** — phát hiện tay thò vào khay
-- **RTC** — lịch uống thuốc chính xác kể cả khi mất WiFi
-- **OLED, Buzzer, DHT11** — hiển thị, cảnh báo và giám sát môi trường bảo quản
+- **Cân tải trọng** (Loadcell + HX711) — đo khối lượng trước/sau để xác nhận đã lấy thuốc
+- **Cảm biến hồng ngoại IR** — kiểm tra an toàn khi đóng khóa (tránh kẹt)
+- **RTC DS1307** — chạy lịch theo thời gian thực kể cả khi mất WiFi
+- **Buzzer** — cảnh báo uống thuốc (non-blocking)
+- **MQTT (PubSubClient)** — nhận lịch uống thuốc từ app/broker và gửi trạng thái lên lại
 
-> **Trạng thái dự án:** Đang phát triển — firmware cơ bản (RTC, Servo, Buzzer) trong `SmartPilBox_embed/`; tích hợp Loadcell, IR, MQTT/Cloud theo lộ trình nhóm.
+> **Trạng thái dự án:** Đang phát triển — firmware đã có FSM điều khiển (RTC + Servo + Buzzer + HX711 + IR + MQTT) trong `SmartPilBox_embed/`. OLED/DHT11/Dashboard mở rộng theo lộ trình nhóm.
 
 ---
 
@@ -52,13 +53,13 @@ Hệ thống kết hợp:
 ```mermaid
 flowchart LR
   subgraph Device["Thiết bị ESP32"]
-    RTC[RTC DS3231]
-    DHT[DHT11]
+    RTC[RTC DS1307]
     LC[Loadcell + HX711]
-    IR[Cảm biến IR]
+    IR[Cảm biến IR (safety)]
     SRV[Servo khóa]
-    OLED[OLED I2C]
     BZ[Buzzer]
+    WIFI[WiFi]
+    PM[Power mgmt (Auto light sleep)]
   end
 
   subgraph Cloud["Cloud / Backend"]
@@ -135,7 +136,7 @@ App publish MQTT message:
 Topic:
 
 ```text
-pillbox/hour
+pillbox/set_hour
 ```
 
 Payload ví dụ:
@@ -149,7 +150,7 @@ và:
 Topic:
 
 ```text
-pillbox/minute
+pillbox/set_minute
 ```
 
 Payload ví dụ:
@@ -223,8 +224,8 @@ App hiển thị cảnh báo màu đỏ hoặc popup đơn giản.
 
 | Topic | Publisher | Subscriber | Mục đích |
 |-------|------------|-------------|----------|
-| `pillbox/hour` | Mobile App | ESP32 | Gửi giờ uống thuốc |
-| `pillbox/minute` | Mobile App | ESP32 | Gửi phút uống thuốc |
+| `pillbox/set_hour` | Mobile App | ESP32 | Gửi giờ uống thuốc |
+| `pillbox/set_minute` | Mobile App | ESP32 | Gửi phút uống thuốc |
 | `pillbox/status` | ESP32 | Mobile App | Gửi trạng thái hộp thuốc |
 
 ---
@@ -263,43 +264,44 @@ Sensor → ESP32 → MQTT → Mobile App
 | STT | Linh kiện | Vai trò |
 |-----|-----------|---------|
 | 1 | **ESP32 DevKit** | Vi điều khiển, WiFi (có sẵn trong học phần) |
-| 2 | **OLED I2C** | Hiển thị giờ, trạng thái, cảnh báo |
-| 3 | **RTC DS3231** | Đồng hồ thời gian thực khi mất mạng |
-| 4 | **DHT11** | Nhiệt độ / độ ẩm bảo quản thuốc |
-| 5 | **Servo SG90** | Khóa / mở nắp hộp |
-| 6 | **Loadcell 1 kg + HX711** | Đo khối lượng thuốc còn lại |
-| 7 | **Cảm biến IR** | Phát hiện tay vào khay |
-| 8 | **Buzzer** | Cảnh báo âm thanh |
-| 9 | **Nút bấm** | Xác nhận / fail-safe khi mất mạng |
-| 10 | **Hộp nhựa + vách Mica** | Cơ khí, ngăn thuốc / ngăn mạch |
+| 2 | **RTC DS1307** | Đồng hồ thời gian thực theo lịch uống thuốc |
+| 3 | **Servo SG90** | Khóa / mở nắp hộp |
+| 4 | **Loadcell + HX711** | Đo chênh lệch khối lượng để xác nhận lấy thuốc |
+| 5 | **Cảm biến IR** | Kiểm tra an toàn khi đóng khóa (tránh kẹt) |
+| 6 | **Buzzer** | Cảnh báo âm thanh |
+| 7 | **Hộp nhựa + vách Mica** | Cơ khí, ngăn thuốc / ngăn mạch |
+
+> **Planned / optional:** OLED I2C, DHT11 (môi trường bảo quản), dashboard/telegram nâng cao.
 
 ---
 
 ## Sơ đồ chân ESP32
 
-| Linh kiện | Giao tiếp | GPIO (gợi ý) | Ghi chú |
-|-----------|----------|--------------|---------|
-| OLED | I2C SDA / SCL | **21** / **22** | Chung bus với RTC |
-| RTC DS3231 | I2C SDA / SCL | **21** / **22** | Đấu song song OLED |
-| HX711 | DT / SCK | **19** / **18** | Tránh chân strapping lúc boot |
-| Servo SG90 | PWM | **13** | Thư viện `ESP32Servo` |
-| Cảm biến IR | Digital IN | **14** | HIGH/LOW khi có vật cản |
-| Buzzer | PWM / DAC | **25** | Âm thanh cảnh báo |
-| Button | Digital IN | **12** | `INPUT_PULLUP` |
+Pin dưới đây được lấy trực tiếp từ `SmartPilBox_embed/src/Config.h` (code hiện tại).
 
-> Pin trong firmware hiện tại (`main.cpp`) có thể khác trong giai đoạn prototype — đồng bộ lại theo bảng trên khi hoàn thiện board.
+| Linh kiện | Giao tiếp | GPIO | Ghi chú |
+|-----------|----------|--------------|---------|
+| RTC DS1307 | I2C SDA / SCL | **21** / **22** | `Wire.begin(21, 22)` |
+| Servo SG90 | PWM | **18** | Điều khiển khóa hộp (`SERVO_PIN`) |
+| Buzzer | Digital/PWM | **19** | `BUZZER_PIN` (buzzer non-blocking) |
+| HX711 | DOUT / SCK | **4** / **5** | `HX711_DOUT_PIN`, `HX711_SCK_PIN` |
+| IR sensor | Digital IN | **23** | `IR_SENSOR_PIN` |
+| IR power | Power control | **12** | `IR_POWER_PIN` (bật/tắt cảm biến IR) |
 
 ---
 
 ## Luồng vận hành
 
-1. **Chờ** — Servo khóa nắp; OLED hiển thị giờ (RTC) và môi trường (DHT11).
-2. **Đến giờ uống thuốc** — Buzzer reo, LED nháy (nếu có), Servo mở khóa; OLED: *"Đến giờ uống thuốc"*.
-3. **Người dùng mở nắp & lấy thuốc** — IR phát hiện tay; lưu khối lượng \(W_1\) trước khi lấy.
-4. **Xác thực** — Sau khi đóng nắp, đợi ổn định ~3 s, đọc \(W_2\):
-   - Nếu \(W_1 - W_2 > 2\,\text{g}\) (ngưỡng cấu hình) → **Đã uống đúng liều** → khóa lại → gửi Cloud *Thành công*.
-   - Nếu nắp/IR có tương tác nhưng \(\Delta m \approx 0\) → **Cảnh báo: chưa lấy thuốc** → tiếp tục Buzzer → gửi Cloud *Cảnh báo*.
-5. **End-user** — Con cái / bác sĩ nhận thông báo qua Dashboard hoặc Telegram.
+Firmware hiện tại vận hành theo **Finite State Machine** (FSM) trong `PillBoxController`:
+
+1. **IDLE** — cập nhật MQTT, đọc thời gian từ RTC; chờ đúng lịch (có thể cập nhật lịch động qua MQTT).
+2. **ALARM** — bật HX711, đọc khối lượng ban đầu \(W_1\), mở khóa Servo, Buzzer bắt đầu beep.
+3. **BOX_OPEN / WAIT_FOR_RETURN** — theo dõi thay đổi khối lượng để phát hiện **nhấc hộp/khay** và **đặt lại**.
+4. **VERIFY_MEDICINE** — đợi cân ổn định, đọc \(W_2\), tính \(\Delta m = W_1 - W_2\):
+   - Nếu \(\Delta m \ge\) ngưỡng `MEDICINE_WEIGHT_THRESHOLD` → publish trạng thái lên MQTT (`pillbox/status`) và chuyển sang đóng hộp.
+   - Nếu không đạt → tiếp tục cảnh báo và quay lại trạng thái mở.
+5. **BOX_CLOSING** — bật IR để kiểm tra an toàn, khóa Servo nếu không có vật cản; sau đó tắt IR và detach Servo để tiết kiệm điện.
+6. **COMPLETED** — power down HX711, sẵn sàng cho chu kỳ tiếp theo.
 
 ---
 
@@ -367,7 +369,9 @@ pio device monitor
 
 ### Cài giờ RTC (một lần)
 
-Trong `src/main.cpp`, bỏ comment dòng `rtc.adjust(...)` (hoặc tương đương cho DS3231), upload **một lần**, sau đó comment lại để tránh reset giờ mỗi lần nạp.
+RTC hiện dùng **DS1307** qua `RTClib`. Trong code, nếu RTC mất nguồn, firmware sẽ tự sync giờ theo thời điểm compile (`__DATE__`, `__TIME__`).
+
+Nếu bạn muốn set giờ thủ công, chỉnh tại lớp `RTCManager` hoặc thêm đoạn `adjust(DateTime(F(__DATE__), F(__TIME__)))` theo nhu cầu và nạp **một lần**.
 
 ### Mô phỏng (tuỳ chọn)
 
