@@ -18,23 +18,22 @@
 
 // --- Servo Angle Parameters ---
 #define SERVO_LOCKED_ANGLE          0      // Vault locked orientation
-#define SERVO_OPEN_ANGLE            90     // Vault open orientation
-
-// --- Audio Configuration ---
-#define BUZZER_BEEP_INTERVAL        500    // Non-blocking pulse cycle duration (milliseconds)
+#define SERVO_OPEN_ANGLE            45     // Vault open orientation
 
 // --- Daily Schedule Configuration (24h) ---
 #define SCHEDULE_HOUR               16      // Scheduled Hour (0-23)
 #define SCHEDULE_MINUTE             48      // Scheduled Minute (0-59)
 
-#define BUZZER_BEEP_INTERVAL 500
+
+constexpr unsigned long IR_DEBOUNCE_TIME = 200;
+constexpr unsigned long LID_CLOSE_CONFIRMATION_TIME = 2000;
 
 // ====================================================================
 // --- THÊM TẠI ĐÂY: Cấu hình Mạng & MQTT ---
 // ====================================================================
-#define WIFI_SSID         "USTH_Student"
-#define WIFI_PASSWORD     "usth2021!"
-#define MQTT_BROKER_IP    "10.10.15.92"
+#define WIFI_SSID         "USTH classroom"
+#define WIFI_PASSWORD     "usth123!@#"
+#define MQTT_BROKER_IP    "192.168.12.9"
 #define MQTT_PORT         1883
 
 #define BUZZER_FREQUENCY 800   // Giảm từ 2000 xuống 800Hz → nhỏ hơn

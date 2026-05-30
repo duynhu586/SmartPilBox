@@ -10,9 +10,14 @@ public:
     void powerOn();
     void powerOff();
     bool isObstacleDetected();
+
 private:
     int sensorPin;
     int pwrPin;
+
+    bool lastRawState;
+    bool stableState;
+    unsigned long lastChangeTime;
 };
 
 #endif

@@ -4,7 +4,8 @@
 #include <WiFi.h>
 #include <PubSubClient.h>
 
-typedef void (*TimeUpdateCallback)(int hour, int minute);
+// Thay đổi callback: Nhận thêm chỉ số Slot (vị trí lịch trình trong mảng)
+typedef void (*TimeUpdateCallback)(int slot, int hour, int minute);
 
 class MQTTManager {
 public:
@@ -21,14 +22,16 @@ private:
     const char* _brokerIp;
     int _port;
     
-    const char* _topicHour = "pillbox/set_hour";
-    const char* _topicMinute = "pillbox/set_minute";
+    // Đổi sang 1 topic quản lý lịch trình chung
+    const char* _topicSchedule = "pillbox/set_schedule";
     
     TimeUpdateCallback _timeCb = nullptr;
 
+    // Các biến lưu trữ tạm thời nhận từ luồng ngầm mạng (Core 0)
+    int _currentSlot = 0;   // <-- THÊM: Lưu tạm index của lịch trình
     int _currentHour = 0; 
-    int _currentMinute = 0;                // <-- THÊM: Lưu tạm phút
-    volatile bool _hasNewSchedule = false; // <-- THÊM: Cờ hiệu báo có lịch mới
+    int _currentMinute = 0; 
+    volatile bool _hasNewSchedule = false; 
 
     void reconnect();
     static void mqttCallback(char* topic, byte* payload, unsigned int length);

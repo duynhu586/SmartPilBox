@@ -3,15 +3,14 @@ import time
 
 # --- CẤU HÌNH ---
 # Giữ nguyên IP hiện tại của bạn
-MQTT_BROKER = "10.10.15.92" 
+MQTT_BROKER = "192.168.12.9" 
 MQTT_PORT = 1883
 
-# THAY ĐỔI: Tách thành 2 topic riêng biệt như ESP32 đang chờ
-TOPIC_HOUR = "pillbox/set_hour"
-TOPIC_MINUTE = "pillbox/set_minute"
+# THAY ĐỔI: Chuyển sang 1 topic tích hợp duy nhất quản lý đa lịch trình
+TOPIC_SCHEDULE = "pillbox/set_schedule"
 
-def send_medicine_time(hour_val, minute_val):
-    """Hàm tự động bóc tách số và gửi qua 2 kênh độc lập"""
+def send_medicine_schedule(slot_val, hour_val, minute_val):
+    """Hàm đóng gói dữ liệu thành dạng 'slot|hour|minute' và gửi qua một topic duy nhất"""
     # Khai báo chuẩn API VERSION2 để tránh lỗi cảnh báo của thư viện
     client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
     
@@ -22,20 +21,14 @@ def send_medicine_time(hour_val, minute_val):
         client.loop_start()
         time.sleep(0.2)  # Đợi một chút để thiết lập kết nối nền ổn định
         
-        # 1. Gửi GIỜ trước
-        print(f"[Publish] Gửi GIỜ: '{hour_val}' tới topic '{TOPIC_HOUR}'")
-        res_hour = client.publish(TOPIC_HOUR, payload=str(hour_val), qos=1)
-        res_hour.wait_for_publish() # Chờ Broker xác nhận đã nhận được Giờ
+        # Đóng gói payload theo định dạng ESP32 chờ đợi: "slot|hour|minute" (Ví dụ: "1|12|30")
+        payload_str = f"{slot_val}|{hour_val}|{minute_val}"
         
-        # Nghỉ một chút giữa 2 lần gửi để tránh nghẽn luồng nhận dữ liệu của ESP32
-        time.sleep(0.1) 
+        print(f"[Publish] Gửi payload: '{payload_str}' tới topic '{TOPIC_SCHEDULE}'")
+        res = client.publish(TOPIC_SCHEDULE, payload=payload_str, qos=1)
+        res.wait_for_publish()  # Chờ Broker xác nhận đã nhận được bản tin
         
-        # 2. Gửi PHÚT sau (Khi ESP32 nhận được cái này, nó sẽ tự kích hoạt đổi giờ)
-        print(f"[Publish] Gửi PHÚT: '{minute_val}' tới topic '{TOPIC_MINUTE}'")
-        res_min = client.publish(TOPIC_MINUTE, payload=str(minute_val), qos=1)
-        res_min.wait_for_publish() # Chờ Broker xác nhận đã nhận được Phút
-        
-        print("[Success] ✅ Đã cập nhật toàn bộ lịch uống thuốc mới thành công!")
+        print("[Success] ✅ Đã gửi cấu hình cập nhật lịch uống thuốc mới thành công!")
         
         client.loop_stop()
         client.disconnect()
@@ -45,23 +38,34 @@ def send_medicine_time(hour_val, minute_val):
         print("Vui lòng đảm bảo dịch vụ Mosquitto trên máy tính vẫn đang ở trạng thái Running.")
 
 if __name__ == "__main__":
-    # Nhập dữ liệu dạng trực quan hằng ngày (Ví dụ: 08:30)
-    user_input = input("Nhập giờ uống thuốc mới (Kiểu HH:MM): ").strip()
+    print("=== TEST CẬP NHẬT ĐA LỊCH TRÌNH PILLBOX ===")
     
-    # Kiểm tra tính hợp lệ của định dạng đầu vào trước khi xử lý
-    if len(user_input) == 5 and ":" in user_input:
-        try:
-            # Server thực hiện việc bóc tách chuỗi thành số nguyên ở đây!
-            parts = user_input.split(":")
+    try:
+        # 1. Nhập slot lịch trình cần thay đổi
+        slot_input = input("Nhập chỉ số Slot cần đặt (0, 1 hoặc 2): ").strip()
+        slot = int(slot_input)
+        
+        if not (0 <= slot <= 2):
+            print("❌ Chỉ số Slot phải nằm trong khoảng từ 0 đến 2 (tương ứng tối đa 3 lịch trình).")
+            exit()
+            
+        # 2. Nhập giờ uống thuốc tương ứng cho slot đó
+        time_input = input(f"Nhập giờ uống thuốc cho Slot [{slot}] (Kiểu HH:MM): ").strip()
+        
+        # Kiểm tra tính hợp lệ của định dạng giờ phút đầu vào
+        if len(time_input) == 5 and ":" in time_input:
+            parts = time_input.split(":")
             hour = int(parts[0])
             minute = int(parts[1])
             
-            # Kiểm tra xem giờ phút nhập vào có hợp lệ trong thực tế không
+            # Kiểm tra xem giờ phút nhập vào có hợp lệ thực tế không
             if 0 <= hour <= 23 and 0 <= minute <= 59:
-                send_medicine_time(hour, minute)
+                # Thực hiện gửi dữ liệu tích hợp lên Broker
+                send_medicine_schedule(slot, hour, minute)
             else:
                 print("❌ Giờ không hợp lệ! (Giờ phải từ 00-23, Phút từ 00-59).")
-        except ValueError:
-            print("❌ Lỗi dữ liệu! Vui lòng chỉ nhập các ký tự số.")
-    else:
-        print("❌ Sai định dạng! Vui lòng nhập chính xác kiểu HH:MM (Ví dụ: 07:15).")
+        else:
+            print("❌ Sai định dạng! Vui lòng nhập chính xác kiểu HH:MM (Ví dụ: 08:30).")
+            
+    except ValueError:
+        print("❌ Lỗi dữ liệu! Vui lòng chỉ nhập các ký tự số.")

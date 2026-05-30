@@ -18,7 +18,7 @@ void ServoManager::open() {
         int startAngle = SERVO_LOCKED_ANGLE; 
         for (int angle = startAngle; angle <= SERVO_OPEN_ANGLE; angle += 5) {
             myServo.write(angle);
-            delay(20); // Mỗi 20ms chỉ nhích 5 độ để giảm dòng khởi động
+            delay(30); // Mỗi 30ms chỉ nhích 5 độ để giảm dòng khởi động
         }
     }
 }
@@ -29,7 +29,7 @@ void ServoManager::lock() {
         int startAngle = SERVO_OPEN_ANGLE;
         for (int angle = startAngle; angle >= SERVO_LOCKED_ANGLE; angle -= 5) {
             myServo.write(angle);
-            delay(20);
+            delay(30);
         }
     }
 }
