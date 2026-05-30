@@ -9,6 +9,16 @@
 #include "../IRSensorManager/IRSensorManager.h"
 #include "../MQTT/MQTTManager.h" // <-- 1. THÊM DÒNG NÀY (sửa lại đường dẫn cho đúng thư mục của bạn)
 
+// Error tracking structure
+struct ErrorLog {
+    int servoErrors = 0;
+    int loadcellErrors = 0;
+    int irSensorErrors = 0;
+    int mqttErrors = 0;
+    int rtcErrors = 0;
+    unsigned long lastErrorTime = 0;
+};
+
 struct MedicationSchedule {
     int hour;
     int minute;
@@ -25,8 +35,11 @@ public:
     void update();
     const char* getStateString(PillBoxState state);
     void setAlarmTime(int hour, int minute, int scheduleIndex);
+    void logError(const char* component, const char* errorMsg);
+    void printErrorSummary();
     // In your .h, add:
     bool boxOpenInitialized = false;
+    ErrorLog errorLog;
 
 private:
     PillBoxState currentState;
@@ -53,6 +66,7 @@ private:
     unsigned long lidClosedStartTime;
 
     void resetSchedulesForNewDay();
+    void resetErrorCounters();
 };
 
 #endif  

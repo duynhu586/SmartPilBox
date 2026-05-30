@@ -9,13 +9,25 @@ void LoadCellManager::begin(int doutPin, int sckPin) {
     scale.set_scale(HX711_CALIBRATION_FACTOR);
     scale.tare();
     tareOffset = scale.get_offset();
+    Serial.println("[LoadCellManager] Initialized HX711 with calibration factor:" );
+    Serial.printf("  factor=%.2f offset=%ld\n", HX711_CALIBRATION_FACTOR, tareOffset);
 }
 
 float LoadCellManager::getWeight() {
-    if (scale.is_ready()) {
-        return scale.get_units(5); // Mean smoothing factor over 5 simulation sweeps
+    // Wait up to 200ms for HX711 to be ready
+    unsigned long start = millis();
+    while (!scale.is_ready() && (millis() - start) < 200) {
+        delay(5);
     }
-    return 0.0;
+    if (!scale.is_ready()) {
+        Serial.println("[LoadCellManager] WARNING: HX711 not ready (timeout)");
+        return 0.0;
+    }
+
+    // Take multiple samples and average to reduce noise
+    const int samples = 10;
+    float units = scale.get_units(samples);
+    return units;
 }
 
 void LoadCellManager::tare() {
@@ -31,6 +43,8 @@ void LoadCellManager::powerDown() {
 
 void LoadCellManager::powerUp() {
     scale.power_up(); // Thư viện thả chân SCK về LOW để kích hoạt lại chip
-    scale.set_offset(tareOffset); 
+    // Small delay to allow HX711 to settle after waking
+    delay(100);
+    scale.set_offset(tareOffset);
     Serial.println("[LoadCellManager] HX711 chip awakened.");
 }

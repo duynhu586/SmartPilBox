@@ -44,8 +44,9 @@ void PillBoxController::begin() {
 
     // [QUẢN LÝ NGUỒN]: Khởi tạo, khóa chốt ngay rồi gỡ xung Servo (Triệt tiêu dòng ngậm điện tĩnh)
     servoManager.begin(SERVO_PIN);
-    delay(1500);
-     // Đợi ngắn cho servo quay hết hành trình
+    delay(200); // Let PWM timer stabilize
+    servoManager.lock();
+    delay(600); // Đợi servo quay hết hành trình
     servoManager.detach(); 
     Serial.println("[OK] Servo Actuator Locked & Detached.");
 
@@ -110,6 +111,52 @@ void PillBoxController::resetSchedulesForNewDay() {
     Serial.println("[INFO] New day detected. All medication schedules reset to uncompleted.");
 }
 
+void PillBoxController::logError(const char* component, const char* errorMsg) {
+    unsigned long now = rtcManager.getCurrentTime().unixtime();
+    errorLog.lastErrorTime = now;
+    
+    Serial.printf("[ERROR] [%s] %s | Time: %lu | ErrorLog: S=%d, L=%d, I=%d, M=%d, R=%d\n",
+                  component, errorMsg,
+                  now,
+                  errorLog.servoErrors,
+                  errorLog.loadcellErrors,
+                  errorLog.irSensorErrors,
+                  errorLog.mqttErrors,
+                  errorLog.rtcErrors);
+    
+    // Increment specific error counter
+    if (strcmp(component, "SERVO") == 0) errorLog.servoErrors++;
+    else if (strcmp(component, "LOADCELL") == 0) errorLog.loadcellErrors++;
+    else if (strcmp(component, "IR") == 0) errorLog.irSensorErrors++;
+    else if (strcmp(component, "MQTT") == 0) errorLog.mqttErrors++;
+    else if (strcmp(component, "RTC") == 0) errorLog.rtcErrors++;
+    
+    // Publish error to MQTT
+    char errorPayload[128];
+    snprintf(errorPayload, sizeof(errorPayload), "ERROR|%s|%s", component, errorMsg);
+    mqttManager.publishStatus(errorPayload);
+}
+
+void PillBoxController::printErrorSummary() {
+    Serial.println("\n==================== ERROR SUMMARY ====================");
+    Serial.printf("Servo Errors: %d\n", errorLog.servoErrors);
+    Serial.printf("Loadcell Errors: %d\n", errorLog.loadcellErrors);
+    Serial.printf("IR Sensor Errors: %d\n", errorLog.irSensorErrors);
+    Serial.printf("MQTT Errors: %d\n", errorLog.mqttErrors);
+    Serial.printf("RTC Errors: %d\n", errorLog.rtcErrors);
+    Serial.printf("Last Error Time: %lu\n", errorLog.lastErrorTime);
+    Serial.println("========================================================\n");
+}
+
+void PillBoxController::resetErrorCounters() {
+    errorLog.servoErrors = 0;
+    errorLog.loadcellErrors = 0;
+    errorLog.irSensorErrors = 0;
+    errorLog.mqttErrors = 0;
+    errorLog.rtcErrors = 0;
+    Serial.println("[INFO] Error counters reset.");
+}
+
 const char* PillBoxController::getStateString(PillBoxState state) {
     switch (state) {
         case IDLE:            return "IDLE";
@@ -153,19 +200,28 @@ void PillBoxController::update() {
                     delay(500); 
                     servoManager.open();
                     delay(1500); 
-                    servoManager.detach();
+                    servoManager.detach();  // ✅ CRITICAL: Detach ngay để tránh spike current làm reset hệ thống
+                    Serial.println("[SERVO] Successfully opened and detached.");
 
                     // Đánh thức cảm biến lực cân
                     loadCellManager.powerUp();
                     delay(500); 
                     for(int i = 0; i < 5; i++) {
-                        loadCellManager.getWeight();
+                        float testReading = loadCellManager.getWeight();
+                        Serial.printf("[CELL-WARMUP] Sample %d: %.2f g\n", i, testReading);
                         delay(20);
                     }
 
                     // Giờ mới lấy giá trị thật
                     beforeWeight = loadCellManager.getWeight();
                     Serial.printf("[CELL] Pre-ingestion weight base: %.2f g\n", beforeWeight);
+                    
+                    // Kiểm tra nếu cân đọc ra giá trị lạ (quá âm hoặc quá cao)
+                    if (beforeWeight < -100 || beforeWeight > 10000) {
+                        logError("LOADCELL", "Invalid startup reading detected");
+                        Serial.printf("[CELL-ERROR] Invalid reading: %.2f g. Retrying...\n", beforeWeight);
+                    }
+                    
                     loadCellManager.powerDown();
 
                     // Kích hoạt báo động chuông và cảm biến IR
@@ -216,13 +272,20 @@ void PillBoxController::update() {
                 delay(100); // Đợi cảm biến IR tắt hẳn để tránh nhiễu khi cân
                 loadCellManager.powerUp();
                 delay(500);
+                
+                // Verify loadcell is working after powerUp
+                float testRead = loadCellManager.getWeight();
+                Serial.printf("[CELL-CHECK] After powerUp: %.2f g\n", testRead);
+                if (testRead < -100 || testRead > 10000) {
+                    logError("LOADCELL", "Failed to read valid weight after powerUp");
+                }
+                
                 boxOpenInitialized = true;
             }  
 
             {   
                 float currentWeight = loadCellManager.getWeight();
-                Serial.printf(
-                "[DEBUG] before=%.2f current=%.2f delta=%.2f\n",
+                Serial.printf("[DEBUG] before=%.2f current=%.2f delta=%.2f\n",
                 beforeWeight,
                 currentWeight,
                 beforeWeight - currentWeight

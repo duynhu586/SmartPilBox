@@ -404,6 +404,39 @@ Hướng nghiên cứu cho học phần tiếp theo (không nằm trong scope fi
 
 ---
 
+## Power Management & Servo Spike Current Warning ⚠️
+
+### Vấn đề: Servo Brown-Out Reset
+
+**Triệu chứng:** Sau khi servo SG90 quay xong, toàn bộ hệ thống tự động reset (mất kết nối, RTC bị ngắt).
+
+**Nguyên nhân:** Servo SG90 yêu cầu dòng điện cao (spike: 500–900 mA) khi quay. Nếu không **detach()** PWM ngay sau khi quay xong, PWM vẫn active → servo tiêu thụ dòng liên tục → sụt điện áp trên 5V rail → ESP32 phát sinh brown-out reset.
+
+### Giải pháp
+
+1. **Code-level fix** ✅ (đã áp dụng):
+   - Gọi `servoManager.detach()` **ngay sau khi delay(1500)** trong mỗi lần quay servo (IDLE state open, BOX_CLOSING state lock)
+   - Servo chỉ attach → write → delay → detach; không giữ PWM active lâu dài
+
+2. **Hardware-level fix** (khuyến khích):
+   - **Thêm capacitor 470µF–1000µF** trên 5V supply **gần chân Servo pins**
+   - Capacitor này hoạt động như *local energy buffer* hấp thụ spike current từ servo, tránh sụt áp toàn hệ thống
+   - **Tiêu chuẩn:** Capacitor điện giải (electrolytic), 16V hoặc cao hơn, ESR thấp (< 1Ω)
+
+3. **Optional: Dùng nguồn 5V riêng cho Servo**
+   - Nếu hệ thống vẫn còn reset sau khi thêm capacitor, cân nhắc đấu Servo vào nguồn 5V **riêng biệt** (power bank hoặc buck converter riêng)
+   - Giữ GND chung với ESP32 để đảm bảo tín hiệu PWM từ GPIO18 được nhân diện chính xác
+
+### Thiết lập kiểm tra
+
+```cpp
+// Trong loop, nếu thấy log:
+// "[SERVO] Successfully opened and detached." 
+// + không còn "brown-out" warning → fix đã hiệu quả
+```
+
+---
+
 ## Giấy phép & disclaimer
 
 Dự án học thuật — **không thay thế tư vấn y tế**. Sản phẩm prototype; cần hiệu chuẩn cân và kiểm thử trước khi dùng thực tế cho người bệnh.
