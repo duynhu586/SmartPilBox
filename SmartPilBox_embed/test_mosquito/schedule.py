@@ -3,11 +3,11 @@ import time
 
 # --- CẤU HÌNH ---
 # Giữ nguyên IP hiện tại của bạn
-MQTT_BROKER = "192.168.12.9" 
+MQTT_BROKER = "192.168.1.3" 
 MQTT_PORT = 1883
 
 # THAY ĐỔI: Chuyển sang 1 topic tích hợp duy nhất quản lý đa lịch trình
-TOPIC_SCHEDULE = "pillbox/set_schedule"
+TOPIC_SCHEDULE = "pillbox/schedule"
 
 def send_medicine_schedule(slot_val, hour_val, minute_val):
     """Hàm đóng gói dữ liệu thành dạng 'slot|hour|minute' và gửi qua một topic duy nhất"""
