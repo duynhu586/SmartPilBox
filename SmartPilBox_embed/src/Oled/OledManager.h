@@ -3,7 +3,7 @@
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include "../config.h"
+#include "../Config.h"
 
 class OledManager {
 private:
