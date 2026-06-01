@@ -16,6 +16,7 @@ public:
     void update();
     const char* getStateString(PillBoxState state);
     void setAlarmTime(int hour, int minute);
+    void adjustRTC(uint32_t epoch);
 
 private:
     PillBoxState currentState;

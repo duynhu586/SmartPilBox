@@ -52,10 +52,10 @@ void PillBoxController::begin() {
     } else {
         Serial.println("[OK] RTC Module Online via Dedicated Wire1 Bus.");
         if (rtcManager.lostPower()) { 
-            Serial.println("[WARN] RTC lost power! Syncing time from compile timestamp (+7h offset for UTC build host)...");
+            Serial.println("[WARN] RTC lost power! Syncing time from compile timestamp (+offset for build host)...");
             DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
-            // Cộng thêm 7 tiếng (7 * 3600 giây) chuyển từ UTC của máy build Fedora sang UTC+7 Việt Nam
-            DateTime localTime = compileTime + TimeSpan(7 * 3600);
+            // Cộng thêm múi giờ chuyển từ UTC của máy build sang giờ địa phương
+            DateTime localTime = compileTime + TimeSpan(TIMEZONE_OFFSET * 3600);
             rtcManager.adjust(localTime);
         }
     }
@@ -88,6 +88,11 @@ void PillBoxController::begin() {
         controller.setAlarmTime(h, m);
     });
 
+    mqttManager.setOnRTCUpdate([](uint32_t epoch) {
+        extern PillBoxController controller;
+        controller.adjustRTC(epoch);
+    });
+
     Serial.printf("[INFO] Monitor alarm set for %02d:%02d daily.\n", alarmHour, alarmMinute);
     Serial.println("System Core Mode: IDLE (Power Saving Management Active)");
 }
@@ -97,6 +102,11 @@ void PillBoxController::setAlarmTime(int hour, int minute) {
     alarmMinute = minute;
     scheduleTriggeredToday = false; 
     Serial.printf("[FSM] Lịch uống thuốc đã được cập nhật động sang: %02d:%02d\n", alarmHour, alarmMinute);
+}
+
+void PillBoxController::adjustRTC(uint32_t epoch) {
+    rtcManager.adjust(DateTime(epoch));
+    Serial.printf("[FSM] RTC Time updated via MQTT. Epoch: %u\n", epoch);
 }
 
 const char* PillBoxController::getStateString(PillBoxState state) {

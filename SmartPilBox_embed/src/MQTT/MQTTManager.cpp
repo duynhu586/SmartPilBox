@@ -48,6 +48,10 @@ void MQTTManager::setOnTimeUpdate(TimeUpdateCallback cb) {
     _timeCb = cb;
 }
 
+void MQTTManager::setOnRTCUpdate(RTCUpdateCallback cb) {
+    _rtcCb = cb;
+}
+
 void MQTTManager::update() {
     if (WiFi.status() != WL_CONNECTED) return;
 
@@ -72,6 +76,15 @@ void MQTTManager::update() {
                 if (_timeCb != nullptr) {
                     _timeCb(_currentHour, _currentMinute); // Gọi cập nhật FSM một cách an toàn
                 }
+            }
+        }
+
+        // XỬ LÝ ĐỒNG BỘ RTC TẠI LUỒNG CHÍNH
+        if (_hasNewRTC) {
+            _hasNewRTC = false; // Hạ cờ hiệu
+            Serial.printf("[MQTT] Luồng chính phát hiện lệnh đồng bộ RTC: %u\n", _newRTCVal);
+            if (_newRTCVal > 0 && _rtcCb != nullptr) {
+                _rtcCb(_newRTCVal);
             }
         }
     }
@@ -117,6 +130,10 @@ void MQTTManager::mqttCallback(char* topic, byte* payload, unsigned int length) 
     else if (strcmp(topic, _instance->_topicMinute) == 0) {
         _instance->_currentMinute = value;
         _instance->_hasNewSchedule = true; // Dựng cờ hiệu báo cho hàm update() biết
+    }
+    else if (strcmp(topic, "pillbox/set_rtc") == 0) {
+        _instance->_newRTCVal = strtoul(buffer, nullptr, 10);
+        _instance->_hasNewRTC = true;
     }
 }
 
