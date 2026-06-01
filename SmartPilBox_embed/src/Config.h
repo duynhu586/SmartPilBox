@@ -2,45 +2,46 @@
 #define CONFIG_H
 
 // --- Pin Assignments ---
-#define SERVO_PIN         18
-#define BUZZER_PIN        19
-#define HX711_DOUT_PIN    4
-#define HX711_SCK_PIN     5
-#define RTC_SDA_PIN       21
-#define RTC_SCL_PIN       22
-#define IR_SENSOR_PIN     23
-#define IR_POWER_PIN     12  // Chân cấp nguồn cho cảm biến IR
+#define OLED_SDA_PIN        32  // Bộ Wire mặc định (I2C 0)
+#define OLED_SCL_PIN        33  // Bộ Wire mặc định (I2C 0)
+
+#define BUZZER_PIN          25  
+
+#define RTC_SDA_PIN         22  // Bộ Wire1 độc lập (I2C 1)
+#define RTC_SCL_PIN         23  // Bộ Wire1 độc lập (I2C 1)
+
+#define SERVO_PIN           14  
+#define HX711_DOUT_PIN      27  
+#define HX711_SCK_PIN       26  
+#define IR_SENSOR_PIN       18  
+#define IR_POWER_PIN        19  // Chân cấp nguồn cho cảm biến IR
 
 // --- System Thresholds & Constants ---
-#define HX711_CALIBRATION_FACTOR    420.0  // Custom load cell scaling factor
-#define MEDICINE_WEIGHT_THRESHOLD   5.0    // Required delta mass reduction (grams) to pass verification
-#define CONTAINER_REMOVED_THRESHOLD 15.0   // Delta reduction (grams) signifying container displacement
+#define HX711_CALIBRATION_FACTOR    420.0  
+#define MEDICINE_WEIGHT_THRESHOLD   2       
+#define CONTAINER_REMOVED_THRESHOLD 15.0   
 
 // --- Servo Angle Parameters ---
-#define SERVO_LOCKED_ANGLE          0      // Vault locked orientation
-#define SERVO_OPEN_ANGLE            90     // Vault open orientation
-
-// --- Audio Configuration ---
-#define BUZZER_BEEP_INTERVAL        500    // Non-blocking pulse cycle duration (milliseconds)
+#define SERVO_LOCKED_ANGLE          0      
+#define SERVO_OPEN_ANGLE            90     
 
 // --- Daily Schedule Configuration (24h) ---
-#define SCHEDULE_HOUR               16      // Scheduled Hour (0-23)
-#define SCHEDULE_MINUTE             48      // Scheduled Minute (0-59)
+#define SCHEDULE_HOUR               16      
+#define SCHEDULE_MINUTE             48      
 
-#define BUZZER_BEEP_INTERVAL 500
+constexpr unsigned long IR_DEBOUNCE_TIME = 200;
+constexpr unsigned long LID_CLOSE_CONFIRMATION_TIME = 2000;
 
-// ====================================================================
-// --- THÊM TẠI ĐÂY: Cấu hình Mạng & MQTT ---
-// ====================================================================
-#define WIFI_SSID         "Le Nhung 1"
-#define WIFI_PASSWORD     "123456Sas"
-#define MQTT_BROKER_IP    "192.168.1.3"
-#define MQTT_PORT         1883
+#define BUZZER_FREQUENCY 800   
+#define BUZZER_BEEP_INTERVAL 500 
+#define ALARM_RINGING_TIMEOUT       1000   
+#define WEIGHT_STABILIZATION_TIME   1500   
 
-#define BUZZER_FREQUENCY 800   // Giảm từ 2000 xuống 800Hz → nhỏ hơn
-#define BUZZER_BEEP_INTERVAL 500 // Thời gian giữa các lần reo chuông (ms)
-#define ALARM_RINGING_TIMEOUT       1000   // Thời gian reo chuông trước khi mở hộp (ms)
-#define WEIGHT_STABILIZATION_TIME   1500   // Thời gian chờ cân ổn định để xác định (ms)
+// --- OLED Display Configuration ---
+#define SCREEN_WIDTH        128
+#define SCREEN_HEIGHT       64
+#define OLED_RESET          -1
+#define OLED_ADDRESS        0x3C
 
 // --- State Machine Declarations ---
 enum PillBoxState {
