@@ -43,8 +43,11 @@ void PillBoxController::begin() {
     } else {
         Serial.println("[OK] RTC DS1307 Module Online.");
         if (rtcManager.lostPower()) { 
-            Serial.println("[WARN] RTC lost power! Syncing time from compile timestamp...");
-            rtcManager.adjust(DateTime(F(__DATE__), F(__TIME__)));
+            Serial.println("[WARN] RTC lost power! Syncing time from compile timestamp (+offset for build host)...");
+            DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
+            // Cộng thêm múi giờ chuyển từ UTC của máy build sang giờ địa phương Việt Nam
+            DateTime localTime = compileTime + TimeSpan(TIMEZONE_OFFSET * 3600);
+            rtcManager.adjust(localTime);
         }
     }
 
