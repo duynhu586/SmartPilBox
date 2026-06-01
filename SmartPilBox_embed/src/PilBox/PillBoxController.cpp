@@ -52,8 +52,11 @@ void PillBoxController::begin() {
     } else {
         Serial.println("[OK] RTC Module Online via Dedicated Wire1 Bus.");
         if (rtcManager.lostPower()) { 
-            Serial.println("[WARN] RTC lost power! Syncing time from compile timestamp...");
-            rtcManager.adjust(DateTime(F(__DATE__), F(__TIME__)));
+            Serial.println("[WARN] RTC lost power! Syncing time from compile timestamp (+7h offset for UTC build host)...");
+            DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
+            // Cộng thêm 7 tiếng (7 * 3600 giây) chuyển từ UTC của máy build Fedora sang UTC+7 Việt Nam
+            DateTime localTime = compileTime + TimeSpan(7 * 3600);
+            rtcManager.adjust(localTime);
         }
     }
 

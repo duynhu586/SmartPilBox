@@ -44,5 +44,6 @@ void RTCManager::adjust(const DateTime& dt) {
 }
 
 bool RTCManager::lostPower() {
+    // DS3231 bắt buộc phải sử dụng lostPower(), không có isrunning()
     return rtc.lostPower(); 
 }
