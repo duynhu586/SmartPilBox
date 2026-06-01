@@ -3,42 +3,58 @@
 
 #include <WiFi.h>
 #include <PubSubClient.h>
+#include <functional> // Thêm thư viện này để dùng std::function
 
-// Thay đổi callback: Nhận thêm chỉ số Slot (vị trí lịch trình trong mảng)
-typedef void (*TimeUpdateCallback)(int slot, int hour, int minute);
+// Khai báo các kiểu dữ liệu Callback
+typedef std::function<void(int, int, int)> TimeUpdateCallback; // slot, hour, minute
+typedef std::function<void(int, int, int)> RtcSyncCallback;   // hour, minute, second
+typedef std::function<void()> TareCommandCallback;             // hàm trống để tare cân
 
 class MQTTManager {
+private:
+    static MQTTManager* _instance;
+    WiFiClient espClient;
+    PubSubClient client;
+    unsigned long lastReconnectAttempt;
+
+    const char* _brokerIp;
+    int _port;
+    const char* _topicSchedule = "pillbox/schedule";
+    const char* _topicSetRtc = "pillbox/set_rtc";
+    const char* _topicTare = "pillbox/tare";
+
+    // --- Biến lưu trữ cho Lịch trình ---
+    int _currentSlot;
+    int _currentHour;
+    int _currentMinute;
+    bool _hasNewSchedule;
+    TimeUpdateCallback _timeCb;
+
+    // --- Biến lưu trữ cho Cấu hình RTC mới ---
+    int _rtcHour;
+    int _rtcMinute;
+    int _rtcSecond;
+    bool _hasRtcSync;
+    RtcSyncCallback _rtcCb;
+
+    // --- Biến lưu trữ cho Lệnh Tare mới ---
+    bool _hasTareCommand;
+    TareCommandCallback _tareCb;
+
+    bool reconnectNonBlocking();
+    static void mqttCallback(char* topic, byte* payload, unsigned int length);
+
 public:
     MQTTManager();
     void begin(const char* ssid, const char* password, const char* brokerIp, int port);
     void update();
-    void setOnTimeUpdate(TimeUpdateCallback cb);
-    void publishStatus(const char* message);
-    bool connected() { return client.connected(); }
-
-private:
-    WiFiClient espClient;
-    PubSubClient client;
-    const char* _brokerIp;
-    int _port;
-    
-    // Đổi sang 1 topic quản lý lịch trình chung
-    const char* _topicSchedule = "pillbox/set_schedule";
-    
-    TimeUpdateCallback _timeCb = nullptr;
-
-    // Các biến lưu trữ tạm thời nhận từ luồng ngầm mạng (Core 0)
-    int _currentSlot = 0;   // <-- THÊM: Lưu tạm index của lịch trình
-    int _currentHour = 0; 
-    int _currentMinute = 0; 
-    volatile bool _hasNewSchedule = false; 
-
     void reconnect();
-    static void mqttCallback(char* topic, byte* payload, unsigned int length);
-    static MQTTManager* _instance;
+    void publishStatus(const char* message);
 
-    unsigned long lastReconnectAttempt;
-    bool reconnectNonBlocking(); 
+    // Các hàm đăng ký Callback kết nối với PillBoxController
+    void setOnTimeUpdate(TimeUpdateCallback cb);
+    void setOnRtcSync(RtcSyncCallback cb);        // Hàm mới
+    void setOnTareCommand(TareCommandCallback cb);  // Hàm mới
 };
 
 #endif

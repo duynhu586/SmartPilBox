@@ -7,7 +7,8 @@
 #include "../Buzzer/BuzzerManager.h"
 #include "../LoadCell/LoadCellManager.h"
 #include "../IRSensorManager/IRSensorManager.h"
-#include "../MQTT/MQTTManager.h" // <-- 1. THÊM DÒNG NÀY (sửa lại đường dẫn cho đúng thư mục của bạn)
+#include "../MQTT/MQTTManager.h" 
+#include "../Oled/OledManager.h"
 
 struct MedicationSchedule {
     int hour;
@@ -24,9 +25,15 @@ public:
     void begin();
     void update();
     const char* getStateString(PillBoxState state);
-    void setAlarmTime(int hour, int minute, int scheduleIndex);
-    // In your .h, add:
+    
+    // Đã sửa lại thứ tự tham số cho khớp chuẩn với file .cpp: (slot, hour, minute)
+    void setAlarmTime(int slot, int hour, int minute);
+    
     bool boxOpenInitialized = false;
+
+    // Khai báo 2 hàm xử lý lệnh MQTT (Để public hoặc private đều được, để public cho thông thoáng)
+    void handleRtcTimeSync(int hour, int minute, int second);
+    void handleLoadCellTare();
 
 private:
     PillBoxState currentState;
@@ -35,7 +42,8 @@ private:
     BuzzerManager buzzerManager;
     LoadCellManager loadCellManager;
     IRSensorManager irSensorManager;
-    MQTTManager mqttManager; // <-- 2. THÊM DÒNG NÀY ĐỂ ĐỊNH DANH BIẾN
+    MQTTManager mqttManager; 
+    OledManager oled;
 
     float beforeWeight;
     float afterWeight;
@@ -52,7 +60,14 @@ private:
     bool lidCloseTimerRunning;
     unsigned long lidClosedStartTime;
 
+    // --- CÁC HÀM HELPER ĐÃ GOM NHÓM LOGIC (THÊM MỚI VÀO ĐÂY) ---
+    void triggerAlarmSequence(int scheduleIndex);
+    void initializeBoxOpenScale();
+    void processWeightVerification();
+    void handleLidClosingRoutine();
+    String getNextScheduleStr();
+    
     void resetSchedulesForNewDay();
 };
 
-#endif  
+#endif
