@@ -35,13 +35,12 @@ void PillBoxController::begin() {
         oled.displayStatus("  INITIALIZING", "System checking...", "Please wait");
     }
 
-    Wire.begin(RTC_SDA_PIN, RTC_SCL_PIN);
-
+    // RTCManager::begin() tự khởi động Wire bus nội bộ, không cần gọi Wire.begin() ở đây
     if (!rtcManager.begin(RTC_SDA_PIN, RTC_SCL_PIN)) {
-        Serial.println("[ERROR] RTC DS1307 module missing!");
+        Serial.println("[ERROR] RTC DS3231 module missing!");
         oled.displayStatus("  RTC ERROR", "Module missing!", "Check wiring");
     } else {
-        Serial.println("[OK] RTC DS1307 Module Online.");
+        Serial.println("[OK] RTC DS3231 Module Online.");
         if (rtcManager.lostPower()) { 
             Serial.println("[WARN] RTC lost power! Syncing time from compile timestamp (+offset for build host)...");
             DateTime compileTime = DateTime(F(__DATE__), F(__TIME__));
