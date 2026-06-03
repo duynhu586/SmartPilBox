@@ -1,8 +1,8 @@
 {
   "schedules": {
     "0": {
-      "hour": 19,
-      "minute": 43
+      "hour": 21,
+      "minute": 39
     },
     "1": null,
     "2": null
@@ -11,13 +11,13 @@
     {
       "date": "2026-06-03",
       "slot": 0,
-      "hour": 19,
-      "minute": 43,
+      "hour": 21,
+      "minute": 39,
       "status": "taken",
-      "marked_at": "2026-06-03T19:41:20.166820",
+      "marked_at": "2026-06-03T21:43:04.131724",
       "source": "manual"
     }
   ],
-  "broker": "localhost",
+  "broker": "192.168.2.28",
   "port": 1883
 }
