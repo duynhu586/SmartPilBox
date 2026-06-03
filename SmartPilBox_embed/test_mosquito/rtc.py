@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 # --- CẤU HÌNH ---
-MQTT_BROKER = "192.168.12.9" 
+MQTT_BROKER = "192.168.2.28" 
 MQTT_PORT = 1883
 TOPIC_SET_RTC = "pillbox/set_rtc"
 

@@ -1,7 +1,7 @@
 #ifndef PILL_BOX_CONTROLLER_H
 #define PILL_BOX_CONTROLLER_H
 
-#include "Config.h"
+#include "../Config.h"
 #include "../RTC/RTCManager.h"
 #include "../Servo/ServoManager.h"
 #include "../Buzzer/BuzzerManager.h"

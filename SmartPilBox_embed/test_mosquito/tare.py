@@ -2,7 +2,7 @@ import paho.mqtt.client as mqtt
 import time
 
 # --- CẤU HÌNH ---
-MQTT_BROKER = "192.168.12.9" 
+MQTT_BROKER = "192.168.2.28" 
 MQTT_PORT = 1883
 TOPIC_TARE = "pillbox/tare"
 

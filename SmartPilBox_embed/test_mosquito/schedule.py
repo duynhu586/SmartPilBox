@@ -3,7 +3,7 @@ import time
 
 # --- CẤU HÌNH ---
 # Giữ nguyên IP hiện tại của bạn
-MQTT_BROKER = "192.168.1.3" 
+MQTT_BROKER = "192.168.2.28" 
 MQTT_PORT = 1883
 
 # THAY ĐỔI: Chuyển sang 1 topic tích hợp duy nhất quản lý đa lịch trình

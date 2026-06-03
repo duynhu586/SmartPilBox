@@ -36,7 +36,7 @@ constexpr unsigned long IR_DEBOUNCE_TIME = 200;
 constexpr unsigned long LID_CLOSE_CONFIRMATION_TIME = 2000;
 
 
-#define BUZZER_FREQUENCY 800   // Giảm từ 2000 xuống 800Hz → nhỏ hơn
+#define BUZZER_FREQUENCY 2000   // Giảm từ 2000 xuống 800Hz → nhỏ hơn
 #define BUZZER_BEEP_INTERVAL 500 // Thời gian giữa các lần reo chuông (ms)
 #define ALARM_RINGING_TIMEOUT       1000   // Thời gian reo chuông trước khi mở hộp (ms)
 #define WEIGHT_STABILIZATION_TIME   1500   // Thời gian chờ cân ổn định để xác định (ms)
