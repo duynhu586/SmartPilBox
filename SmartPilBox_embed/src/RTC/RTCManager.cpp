@@ -3,8 +3,11 @@
 RTCManager::RTCManager() {}
 
 bool RTCManager::begin(int sdaPin, int sclPin) {
+    // Khởi động bus I2C (port 0 - Wire mặc định) trên chân được truyền vào
     Wire.begin(sdaPin, sclPin);
-    if (!rtc.begin()) {
+    // QUAN TRỌNG: truyền tường minh &Wire vào rtc.begin() để đảm bảo
+    // DS3231 dùng đúng I2C instance, tránh lỗi requestFrom Error -1
+    if (!rtc.begin(&Wire)) {
         return false;
     }
     return true;

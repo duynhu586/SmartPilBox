@@ -31,6 +31,9 @@
 #define SCHEDULE_HOUR               16      // Scheduled Hour (0-23)
 #define SCHEDULE_MINUTE             48      // Scheduled Minute (0-59)
 
+// --- Timezone Configuration ---
+#define TIMEZONE_OFFSET             7       // Việt Nam (UTC+7)
+
 
 constexpr unsigned long IR_DEBOUNCE_TIME = 200;
 constexpr unsigned long LID_CLOSE_CONFIRMATION_TIME = 2000;

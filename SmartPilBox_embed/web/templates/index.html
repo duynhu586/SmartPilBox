@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartPilBox — Device Control</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green:        #1e7a4e;
+            --green-dark:   #155c3a;
+            --green-light:  #e8f5ee;
+            --yellow:       #e8a020;
+            --yellow-light: #fff8e6;
+            --purple:       #7b3fa0;
+            --purple-light: #f3eaf9;
+            --red:          #d94040;
+            --red-light:    #fdeaea;
+            --bg:           #f0f5f2;
+            --white:        #ffffff;
+            --text:         #1a2b1a;
+            --muted:        #6b7d6b;
+            --border:       #d6e5da;
+            --shadow:       0 2px 10px rgba(0,0,0,0.08);
+            --radius:       12px;
+        }
+
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+        /* ── HEADER ── */
+        .header {
+            background: var(--green-dark);
+            color: white;
+            padding: 0 24px;
+            height: 56px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            position: sticky; top: 0; z-index: 50;
+        }
+        .header-logo { display: flex; align-items: center; gap: 10px; font-size: 1rem; font-weight: 700; }
+        .pill-icon { width: 32px; height: 32px; background: var(--yellow); border-radius: 50% 50% 50% 0; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .header-title { font-size: 0.9rem; font-weight: 400; opacity: 0.7; margin-left: 16px; padding-left: 16px; border-left: 1px solid rgba(255,255,255,0.2); }
+        .header-right { display: flex; align-items: center; gap: 10px; }
+        .status-badge { display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.12); border-radius: 20px; padding: 5px 12px; font-size: 0.78rem; }
+        .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #4caf50; box-shadow: 0 0 0 2px rgba(76,175,80,0.3); }
+        .status-dot.off { background: #888; box-shadow: none; }
+        .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--yellow); display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid rgba(255,255,255,0.3); }
+
+        /* ── LAYOUT ── */
+        .layout { display: grid; grid-template-columns: 250px 1fr; gap: 20px; padding: 20px 24px 100px; max-width: 1120px; margin: 0 auto; }
+
+        /* ── CARD ── */
+        .card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+        .card-hd { padding: 13px 16px 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .card-hd h3 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+        .card-bd { padding: 14px 16px; }
+
+        /* ── SIDEBAR ── */
+        .sidebar { display: flex; flex-direction: column; gap: 14px; }
+        .broker-field { margin-bottom: 10px; }
+        .broker-field:last-child { margin-bottom: 0; }
+        .broker-field label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+        .broker-field input { border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; width: 100%; background: #fafcfa; transition: border-color .2s; }
+        .broker-field input:focus { outline: none; border-color: var(--green); }
+
+        .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
+        .stat-row:last-child { border-bottom: none; }
+        .stat-row .lbl { color: var(--muted); }
+        .chip { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; }
+        .chip.g  { background: var(--green-light); color: var(--green); }
+        .chip.y  { background: var(--yellow-light); color: #9a6000; }
+        .chip.r  { background: var(--red-light); color: var(--red); }
+        .chip.gr { background: #f0f0f0; color: #888; }
+
+        .quick-link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; background: var(--green-light); color: var(--green-dark); font-size: 0.82rem; font-weight: 500; cursor: pointer; margin-bottom: 8px; border: none; width: 100%; text-align: left; transition: background .15s, transform .1s; }
+        .quick-link:last-child { margin-bottom: 0; }
+        .quick-link:hover { background: #d0eadb; transform: translateX(2px); }
+
+        .alert-item { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 0.78rem; }
+        .alert-item:last-child { border-bottom: none; }
+        .adot { width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+        .adot.ok   { background: var(--green); }
+        .adot.warn { background: var(--yellow); }
+        .adot.err  { background: var(--red); }
+        .al-time { color: var(--muted); font-size: 0.7rem; margin-top: 2px; }
+
+        /* ── MQTT SUBSCRIBER CARD ── */
+        .sub-status {
+            display: flex; align-items: center; gap: 8px;
+            padding: 10px 12px; border-radius: 9px;
+            margin-bottom: 10px; font-size: 0.82rem; font-weight: 600;
+            border: 1.5px solid var(--border);
+        }
+        .sub-status.on  { background: var(--green-light); border-color: var(--green); color: var(--green-dark); }
+        .sub-status.off { background: #f5f5f5; border-color: #ddd; color: #888; }
+        .sub-status.err { background: var(--red-light); border-color: var(--red); color: var(--red); }
+        .sub-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+        .sub-dot.on  { background: var(--green); box-shadow: 0 0 0 3px rgba(30,122,78,.2); animation: pulse 2s infinite; }
+        .sub-dot.off { background: #aaa; }
+        .sub-dot.err { background: var(--red); }
+        @keyframes pulse {
+            0%,100% { box-shadow: 0 0 0 3px rgba(30,122,78,.2); }
+            50%      { box-shadow: 0 0 0 5px rgba(30,122,78,.05); }
+        }
+        .sub-info { font-size: 0.7rem; color: var(--muted); margin-top: 3px; font-weight: 400; }
+        .sub-btn-row { display: flex; gap: 8px; }
+        .sub-btn { flex: 1; padding: 8px 0; border-radius: 8px; border: none; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+        .sub-btn:hover { opacity: .82; }
+        .sub-btn.connect    { background: var(--green); color: white; }
+        .sub-btn.disconnect { background: var(--red-light); color: var(--red); border: 1.5px solid var(--red); }
+        .sub-btn:disabled   { opacity: .45; pointer-events: none; }
+
+        /* source badge on dose dot */
+        .dose-wrap { position: relative; display: inline-block; }
+        .src-badge { position: absolute; bottom: -2px; right: -2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; font-size: 7px; display: flex; align-items: center; justify-content: center; }
+        .src-badge.mqtt   { background: var(--green); color: white; }
+        .src-badge.manual { background: var(--yellow); color: white; }
+
+        /* ── MAIN ── */
+        .main { display: flex; flex-direction: column; gap: 16px; }
+        .page-title { padding-bottom: 4px; }
+        .breadcrumb { font-size: 0.75rem; color: var(--muted); margin-bottom: 2px; }
+        .page-title h1 { font-size: 1.3rem; font-weight: 700; }
+        .page-title p  { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+
+        /* ── ADHERENCE SUMMARY BAR ── */
+        .adh-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        .adh-stat { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 14px 16px; }
+        .adh-stat .as-val { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+        .adh-stat .as-lbl { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+        .adh-stat.green .as-val { color: var(--green); }
+        .adh-stat.yellow .as-val { color: var(--yellow); }
+        .adh-stat.red  .as-val { color: var(--red); }
+        .adh-stat.gray .as-val { color: #999; }
+
+        /* ── SCHEDULE + CALENDAR CARD ── */
+        .cal-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+        .cal-top { padding: 14px 18px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+        .cal-top h3 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+
+        /* slot summary pills */
+        .slot-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+        .slot-pill { display: flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; cursor: default; border: 2px solid transparent; }
+        .slot-pill.s0 { background: var(--yellow-light); color: #7a5000; border-color: var(--yellow); }
+        .slot-pill.s1 { background: var(--green-light);  color: var(--green-dark); border-color: var(--green); }
+        .slot-pill.s2 { background: var(--purple-light); color: #5a2080; border-color: var(--purple); }
+        .slot-pill.empty { background: #f5f5f5; color: #aaa; border-color: #ddd; }
+        .slot-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .slot-pill.s0 .slot-dot { background: var(--yellow); }
+        .slot-pill.s1 .slot-dot { background: var(--green); }
+        .slot-pill.s2 .slot-dot { background: var(--purple); }
+        .slot-pill.empty .slot-dot { background: #ccc; }
+
+        /* week nav */
+        .week-nav { display: flex; align-items: center; gap: 10px; }
+        .week-nav button { width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--border); background: var(--white); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+        .week-nav button:hover { background: var(--green-light); border-color: var(--green); }
+        .week-range { font-size: 0.82rem; font-weight: 600; min-width: 150px; text-align: center; }
+
+        /* calendar grid */
+        .cal-grid { padding: 12px 18px 18px; overflow-x: auto; }
+        .cal-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 480px; }
+        .cal-table th { padding: 6px 4px; text-align: center; font-size: 0.72rem; font-weight: 600; color: var(--muted); }
+        .cal-table th.today-hd { color: var(--green); }
+        .cal-th-date { display: block; font-size: 1rem; font-weight: 700; color: var(--text); margin-top: 2px; }
+        .cal-th-date.today-badge { background: var(--green); color: white; width: 28px; height: 28px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin: 2px auto 0; }
+        .cal-table td { padding: 4px 4px; text-align: center; }
+        .cal-table .row-label { text-align: left; padding-right: 10px; min-width: 70px; }
+        .row-pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; }
+        .row-pill.s0 { background: var(--yellow-light); color: #7a5000; }
+        .row-pill.s1 { background: var(--green-light);  color: var(--green-dark); }
+        .row-pill.s2 { background: var(--purple-light); color: #5a2080; }
+        .row-time { display: block; font-size: 0.65rem; color: var(--muted); margin-top: 2px; }
+
+        /* dose dots */
+        .dose-dot {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; font-weight: 700;
+            margin: 0 auto;
+            transition: transform .15s, box-shadow .15s;
+        }
+        .dose-dot.clickable { cursor: pointer; }
+        .dose-dot.clickable:hover { transform: scale(1.15); box-shadow: 0 2px 8px rgba(0,0,0,0.18); }
+        .dose-dot.taken  { background: var(--green);  color: white; }
+        .dose-dot.missed { background: var(--red);    color: white; }
+        .dose-dot.pending{ background: var(--yellow); color: white; }
+        .dose-dot.future { background: #f0f0f0; color: #bbb; font-size: 0.62rem; line-height: 1.2; }
+        .dose-dot.upcoming { background: var(--green-light); color: var(--green); border: 2px dashed var(--green); font-size: 0.62rem; }
+        .dose-dot.none   { background: transparent; color: #ddd; font-size: 1rem; }
+        .dose-dot.unset  { background: #f5f5f5; color: #ccc; font-size: 1rem; }
+
+        /* ── TODAY DOSES ── */
+        .today-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 14px 18px; border-top: 1px solid var(--border); }
+        .today-dose { border-radius: 10px; padding: 12px 14px; border: 1.5px solid var(--border); position: relative; }
+        .today-dose.taken  { border-color: var(--green);  background: var(--green-light); }
+        .today-dose.missed { border-color: var(--red);    background: var(--red-light); }
+        .today-dose.pending{ border-color: var(--yellow); background: var(--yellow-light); }
+        .today-dose.upcoming{ border-color: var(--border); background: #f9fafb; }
+        .today-dose.unset  { border-color: #e8e8e8; background: #f9f9f9; }
+        .td-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .td-badge { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; }
+        .td-badge.s0 { background: var(--yellow); color: white; }
+        .td-badge.s1 { background: var(--green);  color: white; }
+        .td-badge.s2 { background: var(--purple); color: white; }
+        .td-time { font-size: 1.25rem; font-weight: 700; margin-bottom: 6px; }
+        .td-status { font-size: 0.75rem; color: var(--muted); margin-bottom: 10px; }
+        .today-dose.taken  .td-status { color: var(--green); }
+        .today-dose.missed .td-status { color: var(--red); }
+        .today-dose.pending .td-status { color: #9a6000; }
+        .td-btns { display: flex; gap: 6px; }
+        .td-btn { flex: 1; padding: 6px 0; border-radius: 16px; border: none; font-size: 0.72rem; font-weight: 700; cursor: pointer; transition: opacity .15s; }
+        .td-btn:hover { opacity: .8; }
+        .td-btn.taken  { background: var(--green); color: white; }
+        .td-btn.missed { background: var(--red);   color: white; }
+        .td-btn.clear  { background: #eee; color: #666; }
+
+        /* ── ACTION CARDS ── */
+        .action-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+        .action-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 16px; cursor: pointer; position: relative; overflow: hidden; transition: transform .15s, box-shadow .15s; }
+        .action-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .action-card.rtc::before      { background: var(--yellow); }
+        .action-card.schedule::before { background: var(--green); }
+        .action-card.tare::before     { background: var(--purple); }
+        .action-card:hover { transform: translateY(-3px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+        .ac-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 10px; }
+        .action-card.rtc      .ac-icon { background: var(--yellow-light); }
+        .action-card.schedule .ac-icon { background: var(--green-light); }
+        .action-card.tare     .ac-icon { background: var(--purple-light); }
+        .ac-title { font-size: 0.88rem; font-weight: 700; margin-bottom: 4px; }
+        .ac-desc  { font-size: 0.74rem; color: var(--muted); line-height: 1.4; }
+
+        /* ── LOG ── */
+        .log-hd { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+        .log-hd h3 { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+        .log-clear { font-size: 0.72rem; color: var(--green); cursor: pointer; background: none; border: none; font-weight: 600; }
+        .log-terminal { background: #0f1f13; min-height: 120px; max-height: 200px; overflow-y: auto; padding: 12px 16px; font-family: 'Cascadia Code', 'Courier New', monospace; font-size: 0.76rem; }
+        .log-terminal::-webkit-scrollbar { width: 4px; }
+        .log-terminal::-webkit-scrollbar-thumb { background: #2a4a2a; border-radius: 2px; }
+        .log-entry .ts  { color: #4a6a4a; margin-right: 6px; }
+        .log-entry.info .msg { color: #7ec8a0; }
+        .log-entry.ok   .msg { color: #5ce65c; }
+        .log-entry.err  .msg { color: #ff7070; }
+        .log-entry.send .msg { color: #f0c040; }
+
+        /* ── FAB ── */
+        .fab-wrap { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column-reverse; align-items: flex-end; gap: 12px; z-index: 200; }
+        .fab-main { width: 54px; height: 54px; border-radius: 50%; background: var(--green); color: white; border: none; cursor: pointer; font-size: 24px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(30,122,78,.45); transition: background .2s, transform .3s; }
+        .fab-main:hover { background: var(--green-dark); }
+        .fab-main.open  { background: var(--red); transform: rotate(45deg); }
+        .fab-subs { display: flex; flex-direction: column-reverse; gap: 10px; opacity: 0; pointer-events: none; transform: translateY(8px); transition: opacity .22s, transform .22s; }
+        .fab-subs.open { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .fab-row { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+        .fab-label { background: var(--white); color: var(--text); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; box-shadow: var(--shadow); white-space: nowrap; }
+        .fab-btn { width: 44px; height: 44px; border-radius: 50%; border: none; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(0,0,0,0.18); transition: transform .15s; }
+        .fab-btn:hover { transform: scale(1.1); }
+        .fab-btn.rtc      { background: var(--yellow); color: white; }
+        .fab-btn.schedule { background: var(--green);  color: white; }
+        .fab-btn.tare     { background: var(--purple);  color: white; }
+
+        /* ── OVERLAY + MODAL ── */
+        .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.42); z-index: 500; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+        .overlay.show { display: flex; }
+        .modal { background: var(--white); border-radius: 16px; width: 90%; max-width: 380px; box-shadow: 0 12px 40px rgba(0,0,0,.18); animation: pop .18s ease; overflow: hidden; }
+        @keyframes pop { from { transform: scale(.92); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-bar { height: 4px; }
+        .modal-bar.rtc      { background: var(--yellow); }
+        .modal-bar.schedule { background: var(--green); }
+        .modal-bar.tare     { background: var(--purple); }
+        .modal-bd { padding: 22px 24px 20px; }
+        .modal-title { font-size: 1rem; font-weight: 700; margin-bottom: 18px; }
+
+        .fg { margin-bottom: 14px; }
+        .fg label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+        .fg input, .fg select { width: 100%; border: 1.5px solid var(--border); border-radius: 9px; padding: 10px 12px; font-size: .9rem; background: #fafcfa; transition: border-color .2s; }
+        .fg input:focus, .fg select:focus { outline: none; border-color: var(--green); background: white; }
+        .radio-row { display: flex; gap: 18px; }
+        .radio-row label { display: flex; align-items: center; gap: 6px; font-size: .86rem; cursor: pointer; text-transform: none; letter-spacing: 0; color: var(--text); font-weight: 400; }
+        .radio-row input[type=radio] { accent-color: var(--green); }
+        .note-box { background: var(--yellow-light); border-left: 3px solid var(--yellow); border-radius: 0 8px 8px 0; padding: 10px 12px; font-size: .8rem; color: #5a4000; margin-bottom: 14px; line-height: 1.45; }
+
+        .btn-row { display: flex; gap: 10px; margin-top: 20px; }
+        .btn { flex: 1; padding: 10px 16px; border-radius: 20px; border: none; font-size: .86rem; font-weight: 700; cursor: pointer; transition: opacity .18s, transform .1s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn:hover { opacity: .86; }
+        .btn:active { transform: scale(.97); }
+        .btn-cancel   { background: #eef2ee; color: var(--muted); }
+        .btn-rtc      { background: var(--yellow); color: white; }
+        .btn-schedule { background: var(--green);  color: white; }
+        .btn-tare     { background: var(--purple);  color: white; }
+        .btn.loading  { opacity: .55; pointer-events: none; }
+
+        @media (max-width: 780px) {
+            .layout { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .action-grid { grid-template-columns: 1fr 1fr; }
+            .adh-bar { grid-template-columns: repeat(2, 1fr); }
+            .today-grid { grid-template-columns: 1fr; }
+            .header-title { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+    <div style="display:flex;align-items:center">
+        <div class="header-logo">
+            <div class="pill-icon">💊</div>
+            <span>SmartPilBox</span>
+        </div>
+        <span class="header-title">Device Control Panel</span>
+    </div>
+    <div class="header-right">
+        <div class="status-badge"><div class="status-dot off" id="conn-dot"></div><span id="conn-lbl">Chưa gửi lệnh</span></div>
+        <div class="avatar">👤</div>
+    </div>
+</header>
+
+<div class="layout">
+
+<!-- ══ SIDEBAR ══ -->
+<aside class="sidebar">
+    <div class="card">
+        <div class="card-hd"><h3>⚙️ MQTT Broker</h3></div>
+        <div class="card-bd">
+            <div class="broker-field"><label>Địa chỉ IP</label><input id="broker-ip" value="localhost"></div>
+            <div class="broker-field"><label>Port</label><input id="broker-port" type="number" value="1883" min="1" max="65535"></div>
+        </div>
+    </div>
+
+    <!-- MQTT Subscriber card -->
+    <div class="card">
+        <div class="card-hd"><h3>📡 MQTT Subscriber</h3></div>
+        <div class="card-bd">
+            <div class="sub-status off" id="sub-status">
+                <div>
+                    <div style="display:flex;align-items:center;gap:7px"><div class="sub-dot off" id="sub-dot"></div><span id="sub-label">Chưa kết nối</span></div>
+                    <div class="sub-info" id="sub-info">pillbox/status · pillbox/weight</div>
+                </div>
+            </div>
+            <div class="sub-btn-row">
+                <button class="sub-btn connect"    id="btn-sub-conn"  onclick="mqttConnect()">Kết nối</button>
+                <button class="sub-btn disconnect" id="btn-sub-disc"  onclick="mqttDisconnect()" disabled>Ngắt</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-hd"><h3>📟 Lệnh cuối</h3></div>
+        <div class="card-bd">
+            <div class="stat-row"><span class="lbl">RTC</span><span class="chip gr" id="stat-rtc">–</span></div>
+            <div class="stat-row"><span class="lbl">Schedule</span><span class="chip gr" id="stat-sch">–</span></div>
+            <div class="stat-row"><span class="lbl">Tare</span><span class="chip gr" id="stat-tare">–</span></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-hd"><h3>🔗 Phím tắt</h3></div>
+        <div class="card-bd">
+            <button class="quick-link" onclick="openModal('rtc')"><span>🕐</span> Chỉnh giờ RTC</button>
+            <button class="quick-link" onclick="openModal('schedule')"><span>📅</span> Đặt lịch uống</button>
+            <button class="quick-link" onclick="openModal('tare')"><span>⚖️</span> Reset cân (Tare)</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-hd"><h3>🔔 Hoạt động gần đây</h3></div>
+        <div class="card-bd" id="sidebar-log" style="max-height:180px;overflow-y:auto">
+            <div class="alert-item"><div class="adot ok"></div><div><div>Hệ thống sẵn sàng</div><div class="al-time">Vừa khởi động</div></div></div>
+        </div>
+    </div>
+</aside>
+
+<!-- ══ MAIN ══ -->
+<main class="main">
+
+    <!-- Page title -->
+    <div class="page-title">
+        <div class="breadcrumb">Home / Device Control</div>
+        <h1>Điều khiển &amp; Theo dõi lịch uống thuốc</h1>
+        <p>Gửi lệnh tới ESP32 qua MQTT và theo dõi tình trạng uống thuốc theo ngày</p>
+    </div>
+
+    <!-- Adherence summary -->
+    <div class="adh-bar" id="adh-bar">
+        <div class="adh-stat green"><div class="as-val" id="adh-taken">0</div><div class="as-lbl">Đã uống hôm nay</div></div>
+        <div class="adh-stat gray" ><div class="as-val" id="adh-sched">0</div><div class="as-lbl">Tổng lịch hôm nay</div></div>
+        <div class="adh-stat red"  ><div class="as-val" id="adh-missed">0</div><div class="as-lbl">Bỏ lỡ hôm nay</div></div>
+        <div class="adh-stat yellow"><div class="as-val" id="adh-pct">–</div><div class="as-lbl">Tỉ lệ tuân thủ (7d)</div></div>
+    </div>
+
+    <!-- ══ CALENDAR CARD ══ -->
+    <div class="cal-card">
+        <!-- top bar: slot pills + week nav -->
+        <div class="cal-top">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                <h3>📅 Lịch uống thuốc</h3>
+                <div class="slot-pills" id="slot-pills">
+                    <div class="slot-pill empty" id="sp0"><div class="slot-dot"></div>Slot 0: Chưa đặt</div>
+                    <div class="slot-pill empty" id="sp1"><div class="slot-dot"></div>Slot 1: Chưa đặt</div>
+                    <div class="slot-pill empty" id="sp2"><div class="slot-dot"></div>Slot 2: Chưa đặt</div>
+                </div>
+            </div>
+            <div class="week-nav">
+                <button onclick="changeWeek(-1)" title="Tuần trước">‹</button>
+                <span class="week-range" id="week-range">—</span>
+                <button onclick="changeWeek(+1)" title="Tuần sau">›</button>
+            </div>
+        </div>
+
+        <!-- calendar grid -->
+        <div class="cal-grid">
+            <table class="cal-table" id="cal-table">
+                <thead id="cal-head"></thead>
+                <tbody id="cal-body"></tbody>
+            </table>
+        </div>
+
+        <!-- today doses -->
+        <div class="today-grid" id="today-grid"></div>
+    </div>
+
+    <!-- ══ DEVICE COMMAND CARDS ══ -->
+    <div class="action-grid">
+        <div class="action-card rtc" onclick="openModal('rtc')">
+            <div class="ac-icon">🕐</div>
+            <div class="ac-title">Chỉnh giờ RTC</div>
+            <div class="ac-desc">Đồng bộ hoặc nhập tay giờ phút giây cho đồng hồ thực trên ESP32.</div>
+        </div>
+        <div class="action-card schedule" onclick="openModal('schedule')">
+            <div class="ac-icon">📅</div>
+            <div class="ac-title">Đặt lịch uống thuốc</div>
+            <div class="ac-desc">Cài giờ uống cho từng slot (0, 1, 2) lưu vào bộ nhớ PillBox.</div>
+        </div>
+        <div class="action-card tare" onclick="openModal('tare')">
+            <div class="ac-icon">⚖️</div>
+            <div class="ac-title">Reset cân (Tare)</div>
+            <div class="ac-desc">Gửi lệnh TARE đưa loadcell về 0 khi khay đang trống.</div>
+        </div>
+    </div>
+
+    <!-- Command log -->
+    <div class="card">
+        <div class="log-hd">
+            <h3>📋 Command Log</h3>
+            <button class="log-clear" onclick="clearLog()">Xóa log</button>
+        </div>
+        <div class="log-terminal" id="log"></div>
+    </div>
+
+</main>
+</div>
+
+<!-- FAB -->
+<div class="fab-wrap">
+    <button class="fab-main" id="fab-main" onclick="toggleFab()">+</button>
+    <div class="fab-subs" id="fab-subs">
+        <div class="fab-row"><span class="fab-label">Reset cân (Tare)</span><button class="fab-btn tare" onclick="openModal('tare')">⚖️</button></div>
+        <div class="fab-row"><span class="fab-label">Đặt lịch uống</span><button class="fab-btn schedule" onclick="openModal('schedule')">📅</button></div>
+        <div class="fab-row"><span class="fab-label">Chỉnh giờ RTC</span><button class="fab-btn rtc" onclick="openModal('rtc')">🕐</button></div>
+    </div>
+</div>
+
+<!-- MODAL RTC -->
+<div class="overlay" id="overlay-rtc">
+    <div class="modal">
+        <div class="modal-bar rtc"></div>
+        <div class="modal-bd">
+            <div class="modal-title">🕐 Cập nhật giờ RTC</div>
+            <div class="fg">
+                <label>Phương thức</label>
+                <div class="radio-row">
+                    <label><input type="radio" name="rtc-mode" value="auto" checked onchange="onRtcMode()"> Tự động (giờ máy tính)</label>
+                    <label><input type="radio" name="rtc-mode" value="manual" onchange="onRtcMode()"> Nhập tay</label>
+                </div>
+            </div>
+            <div class="fg" id="rtc-manual" style="display:none">
+                <label>Thời gian (HH:MM:SS)</label>
+                <input type="time" id="rtc-time" step="1">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-cancel" onclick="closeModal('rtc')">Hủy</button>
+                <button class="btn btn-rtc" id="btn-rtc" onclick="sendRtc()">Gửi lệnh</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL SCHEDULE -->
+<div class="overlay" id="overlay-schedule">
+    <div class="modal">
+        <div class="modal-bar schedule"></div>
+        <div class="modal-bd">
+            <div class="modal-title">📅 Đặt lịch uống thuốc</div>
+            <div class="fg">
+                <label>Slot lịch trình</label>
+                <select id="sch-slot">
+                    <option value="0">Slot 0 — Lịch uống thứ nhất</option>
+                    <option value="1">Slot 1 — Lịch uống thứ hai</option>
+                    <option value="2">Slot 2 — Lịch uống thứ ba</option>
+                </select>
+            </div>
+            <div class="fg">
+                <label>Giờ uống thuốc</label>
+                <input type="time" id="sch-time">
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-cancel" onclick="closeModal('schedule')">Hủy</button>
+                <button class="btn btn-schedule" id="btn-sch" onclick="sendSchedule()">Gửi lệnh</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL TARE -->
+<div class="overlay" id="overlay-tare">
+    <div class="modal">
+        <div class="modal-bar tare"></div>
+        <div class="modal-bd">
+            <div class="modal-title">⚖️ Reset cân (Tare)</div>
+            <div class="note-box">Đảm bảo khay cân đang <strong>trống hoàn toàn</strong>. ESP32 sẽ lấy giá trị hiện tại làm mốc 0.</div>
+            <div class="btn-row">
+                <button class="btn btn-cancel" onclick="closeModal('tare')">Hủy</button>
+                <button class="btn btn-tare" id="btn-tare" onclick="sendTare()">Xác nhận Tare</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ─── SSE (Server-Sent Events) ─────────────────────────────────
+(function initSSE() {
+    const es = new EventSource('/api/events');
+
+    es.onmessage = (e) => {
+        let data;
+        try { data = JSON.parse(e.data); } catch { return; }
+
+        switch (data.type) {
+            case 'hello':
+                if (data.mqtt) updateSubUI(data.mqtt);
+                break;
+            case 'mqtt_connected':
+                updateSubUI({ connected: true, broker: data.broker, port: data.port });
+                log(`📡 Subscriber kết nối tới ${data.broker}:${data.port}`, 'ok');
+                break;
+            case 'mqtt_disconnected':
+                updateSubUI({ connected: false });
+                log('📡 Subscriber đã ngắt kết nối', 'warn');
+                break;
+            case 'mqtt_error':
+                updateSubUI({ connected: false, error: data.msg });
+                log(`❌ MQTT lỗi: ${data.msg}`, 'err');
+                break;
+            case 'state_updated':
+                refreshState();
+                if (data.source === 'mqtt' && data.status) {
+                    const slotName = `Slot ${data.slot}`;
+                    const verb = data.status === 'taken' ? '✅ Đã uống' : '❌ Bỏ lỡ';
+                    log(`📡 ESP32 → ${slotName}: ${verb}`, 'ok');
+                }
+                break;
+            case 'weight':
+                log(`⚖️ Cân nặng từ ESP32: ${data.value}`, 'info');
+                break;
+            case 'mqtt_raw':
+                log(`📥 pillbox/status raw: ${data.payload}`, 'info');
+                break;
+        }
+    };
+
+    es.onerror = () => {
+        // SSE tự kết nối lại — không cần xử lý thêm
+    };
+})();
+
+// ─── MQTT Subscriber UI ───────────────────────────────────────
+function updateSubUI(mqtt) {
+    const status = document.getElementById('sub-status');
+    const dot    = document.getElementById('sub-dot');
+    const label  = document.getElementById('sub-label');
+    const info   = document.getElementById('sub-info');
+    const btnC   = document.getElementById('btn-sub-conn');
+    const btnD   = document.getElementById('btn-sub-disc');
+
+    if (mqtt.connected) {
+        status.className = 'sub-status on';
+        dot.className    = 'sub-dot on';
+        label.textContent = 'Đang lắng nghe';
+        info.textContent  = `${mqtt.broker}:${mqtt.port} · pillbox/status`;
+        btnC.disabled = true;
+        btnD.disabled = false;
+    } else {
+        const isErr = !!mqtt.error;
+        status.className = `sub-status ${isErr ? 'err' : 'off'}`;
+        dot.className    = `sub-dot ${isErr ? 'err' : 'off'}`;
+        label.textContent = isErr ? 'Lỗi kết nối' : 'Chưa kết nối';
+        info.textContent  = isErr ? mqtt.error : 'pillbox/status · pillbox/weight';
+        btnC.disabled = false;
+        btnD.disabled = true;
+    }
+
+    // sync header badge
+    document.getElementById('conn-dot').className = `status-dot ${mqtt.connected ? '' : 'off'}`;
+    document.getElementById('conn-lbl').textContent = mqtt.connected ? 'Subscriber online' : 'Subscriber offline';
+}
+
+async function mqttConnect() {
+    const body = {
+        broker: document.getElementById('broker-ip').value.trim(),
+        port:   parseInt(document.getElementById('broker-port').value) || 1883,
+    };
+    document.getElementById('btn-sub-conn').disabled = true;
+    log(`Đang kết nối subscriber tới ${body.broker}:${body.port}...`, 'send');
+    try {
+        await fetch('/api/mqtt/connect', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    } catch(e) {
+        log(`❌ Không thể gọi server: ${e.message}`, 'err');
+        document.getElementById('btn-sub-conn').disabled = false;
+    }
+}
+
+async function mqttDisconnect() {
+    log('Đang ngắt subscriber...', 'send');
+    await fetch('/api/mqtt/disconnect', { method: 'POST' });
+}
+
+// ─── Constants ────────────────────────────────────────────────
+const DAYS  = ['T2','T3','T4','T5','T6','T7','CN'];
+const DAYS_VN = ['Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7','Chủ nhật'];
+const MONTHS_VN = ['Th1','Th2','Th3','Th4','Th5','Th6','Th7','Th8','Th9','Th10','Th11','Th12'];
+const SLOT_COLORS = ['s0','s1','s2'];
+const SLOT_NAMES  = ['Slot 0','Slot 1','Slot 2'];
+
+let weekOffset = 0;
+let appState   = { schedules: {'0': null, '1': null, '2': null}, dose_log: [] };
+
+// ─── Date helpers ─────────────────────────────────────────────
+function toISO(d) { return d.toISOString().slice(0, 10); }
+
+function getWeekDates(offset = 0) {
+    const today = new Date();
+    const dow = today.getDay();                    // 0=Sun
+    const diff = dow === 0 ? -6 : 1 - dow;        // shift to Mon
+    const mon = new Date(today);
+    mon.setDate(today.getDate() + diff + offset * 7);
+    return Array.from({length: 7}, (_, i) => {
+        const d = new Date(mon);
+        d.setDate(mon.getDate() + i);
+        return d;
+    });
+}
+
+function todayISO() { return toISO(new Date()); }
+
+function pad2(n) { return String(n).padStart(2,'0'); }
+
+function fmtTime(sch) {
+    if (!sch) return null;
+    return `${pad2(sch.hour)}:${pad2(sch.minute)}`;
+}
+
+// ─── Dose status logic ────────────────────────────────────────
+function getDoseEntry(dateISO, slot) {
+    return appState.dose_log.find(d => d.date === dateISO && d.slot === slot) || null;
+}
+
+function calcDotInfo(dateISO, slot) {
+    const sch = appState.schedules[String(slot)];
+    if (!sch) return { cls: 'unset', label: '–', clickable: false };
+
+    const today  = todayISO();
+    const now    = new Date();
+    const entry  = getDoseEntry(dateISO, slot);
+    const timeStr = fmtTime(sch);
+
+    if (dateISO > today) {
+        return { cls: 'future', label: timeStr, clickable: false };
+    }
+
+    if (entry?.status === 'taken')  return { cls: 'taken',  label: '✓', clickable: true };
+    if (entry?.status === 'missed') return { cls: 'missed', label: '✗', clickable: true };
+
+    if (dateISO === today) {
+        const slotTime = new Date();
+        slotTime.setHours(sch.hour, sch.minute, 0, 0);
+        if (now < slotTime) {
+            return { cls: 'upcoming', label: timeStr, clickable: true };
+        } else {
+            return { cls: 'pending', label: '?', clickable: true };
+        }
+    }
+    // past day, no entry → treat as missed
+    return { cls: 'missed', label: '✗', clickable: true };
+}
+
+// ─── Calendar render ──────────────────────────────────────────
+function renderCalendar() {
+    const dates  = getWeekDates(weekOffset);
+    const today  = todayISO();
+
+    // Week range label
+    const d0 = dates[0], d6 = dates[6];
+    document.getElementById('week-range').textContent =
+        `${d0.getDate()} ${MONTHS_VN[d0.getMonth()]} — ${d6.getDate()} ${MONTHS_VN[d6.getMonth()]} ${d6.getFullYear()}`;
+
+    // Slot pills
+    [0,1,2].forEach(s => {
+        const sch = appState.schedules[String(s)];
+        const el  = document.getElementById(`sp${s}`);
+        if (sch) {
+            el.className = `slot-pill s${s}`;
+            el.innerHTML = `<div class="slot-dot"></div>${SLOT_NAMES[s]}: ${fmtTime(sch)}`;
+        } else {
+            el.className = 'slot-pill empty';
+            el.innerHTML = `<div class="slot-dot"></div>${SLOT_NAMES[s]}: Chưa đặt`;
+        }
+    });
+
+    // Table header
+    const head = document.getElementById('cal-head');
+    const headCells = dates.map((d, i) => {
+        const isT = toISO(d) === today;
+        const dateNum = `<span class="cal-th-date ${isT ? 'today-badge' : ''}">${d.getDate()}</span>`;
+        return `<th class="${isT ? 'today-hd' : ''}">${DAYS[i]}<br>${dateNum}</th>`;
+    }).join('');
+    head.innerHTML = `<tr><th></th>${headCells}</tr>`;
+
+    // Table body — one row per slot
+    const body = document.getElementById('cal-body');
+    body.innerHTML = '';
+    [0,1,2].forEach(slot => {
+        const sch = appState.schedules[String(slot)];
+        const cells = dates.map(d => {
+            const ds    = toISO(d);
+            const info  = calcDotInfo(ds, slot);
+            const entry = getDoseEntry(ds, slot);
+            const src   = entry?.source;
+            const clk   = info.clickable
+                ? `onclick="cycleStatus('${ds}',${slot})" title="${fmtTime(sch)} — click để đổi"`
+                : '';
+            const badge = (info.cls === 'taken' || info.cls === 'missed') && src
+                ? `<div class="src-badge ${src}" title="${src === 'mqtt' ? 'Tự động từ ESP32' : 'Thủ công'}">${src === 'mqtt' ? '⚡' : '✏'}</div>`
+                : '';
+            return `<td><div class="dose-wrap">
+                <div class="dose-dot ${info.cls} ${info.clickable ? 'clickable' : ''}" ${clk}>${info.label}</div>
+                ${badge}
+            </div></td>`;
+        }).join('');
+
+        const rowLabel = `<td class="row-label">
+            <div class="row-pill s${slot}">${SLOT_NAMES[slot]}</div>
+            <span class="row-time">${sch ? fmtTime(sch) : 'Chưa đặt'}</span>
+        </td>`;
+        const tr = document.createElement('tr');
+        tr.innerHTML = rowLabel + cells;
+        body.appendChild(tr);
+    });
+
+    // Today's doses panel (only when viewing current week)
+    renderTodayDoses();
+
+    // Adherence summary
+    updateSummary();
+}
+
+function renderTodayDoses() {
+    const today = todayISO();
+    const grid  = document.getElementById('today-grid');
+    grid.innerHTML = '';
+
+    // Only render the "today" panel when this week is visible
+    const dates = getWeekDates(weekOffset);
+    const weekISOs = dates.map(toISO);
+    if (!weekISOs.includes(today)) {
+        grid.style.display = 'none';
+        return;
+    }
+    grid.style.display = 'grid';
+
+    [0,1,2].forEach(slot => {
+        const sch  = appState.schedules[String(slot)];
+        const info = calcDotInfo(today, slot);
+        const timeStr = sch ? fmtTime(sch) : '–';
+
+        const statusText = {
+            taken:    '✅ Đã uống',
+            missed:   '❌ Bỏ lỡ',
+            pending:  '⚠️ Chờ xác nhận',
+            upcoming: `⏰ Còn ${timeUntil(sch)}`,
+            unset:    'Slot chưa đặt',
+            future:   '',
+        }[info.cls] || '';
+
+        const hasSch = !!sch;
+        const entry  = getDoseEntry(today, slot);
+
+        const btns = hasSch ? `
+            <div class="td-btns">
+                <button class="td-btn taken"  onclick="markToday(${slot},'taken')" >✓ Đã uống</button>
+                <button class="td-btn missed" onclick="markToday(${slot},'missed')">✗ Bỏ lỡ</button>
+                ${entry ? `<button class="td-btn clear" onclick="markToday(${slot},'clear')">↩</button>` : ''}
+            </div>` : '<div style="font-size:.75rem;color:#ccc">Slot chưa có lịch</div>';
+
+        const card = document.createElement('div');
+        card.className = `today-dose ${info.cls}`;
+        card.innerHTML = `
+            <div class="td-header">
+                <span class="td-badge s${slot}">${SLOT_NAMES[slot]}</span>
+            </div>
+            <div class="td-time">${timeStr}</div>
+            <div class="td-status">${statusText}</div>
+            ${btns}`;
+        grid.appendChild(card);
+    });
+}
+
+function timeUntil(sch) {
+    if (!sch) return '';
+    const now  = new Date();
+    const tgt  = new Date();
+    tgt.setHours(sch.hour, sch.minute, 0, 0);
+    const diff = Math.max(0, Math.round((tgt - now) / 60000));
+    if (diff < 60) return `${diff} phút`;
+    return `${Math.floor(diff/60)}h${diff%60}m`;
+}
+
+function updateSummary() {
+    const today = todayISO();
+    let scheduled = 0, taken = 0, missed = 0;
+    [0,1,2].forEach(slot => {
+        const sch = appState.schedules[String(slot)];
+        if (!sch) return;
+        scheduled++;
+        const entry = getDoseEntry(today, slot);
+        if (entry?.status === 'taken')  taken++;
+        if (entry?.status === 'missed') missed++;
+
+        // Auto-count past time with no entry as missed
+        const slotTime = new Date();
+        slotTime.setHours(sch.hour, sch.minute, 0, 0);
+        if (!entry && new Date() > slotTime) missed++;
+    });
+    document.getElementById('adh-taken').textContent  = taken;
+    document.getElementById('adh-sched').textContent  = scheduled;
+    document.getElementById('adh-missed').textContent = Math.max(0, missed - taken); // dedup
+
+    // 7-day adherence
+    const totalExpected = calc7dExpected();
+    const totalTaken    = appState.dose_log.filter(d => d.status === 'taken').length;
+    const pct = totalExpected > 0 ? Math.round(totalTaken / totalExpected * 100) : 0;
+    document.getElementById('adh-pct').textContent = totalExpected > 0 ? `${pct}%` : '–';
+}
+
+function calc7dExpected() {
+    const now = new Date();
+    let count = 0;
+    for (let i = 6; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(now.getDate() - i);
+        const ds = toISO(d);
+        [0,1,2].forEach(slot => {
+            const sch = appState.schedules[String(slot)];
+            if (!sch) return;
+            if (ds < toISO(now)) count++;
+            else if (ds === toISO(now)) {
+                const slotTime = new Date();
+                slotTime.setHours(sch.hour, sch.minute, 0, 0);
+                if (now >= slotTime) count++;
+            }
+        });
+    }
+    return count;
+}
+
+// ─── Week navigation ──────────────────────────────────────────
+function changeWeek(delta) {
+    weekOffset += delta;
+    renderCalendar();
+}
+
+// ─── Dose cycle / mark ────────────────────────────────────────
+async function cycleStatus(dateISO, slot) {
+    const entry = getDoseEntry(dateISO, slot);
+    let next;
+    if (!entry)                    next = 'taken';
+    else if (entry.status === 'taken')  next = 'missed';
+    else if (entry.status === 'missed') next = 'clear';
+    else                                next = 'taken';
+
+    await postMark(dateISO, slot, next);
+}
+
+async function markToday(slot, status) {
+    await postMark(todayISO(), slot, status);
+}
+
+async function postMark(dateISO, slot, status) {
+    try {
+        const res  = await fetch('/api/dose/mark', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ slot, date: dateISO, status })
+        });
+        const data = await res.json();
+        if (data.success) {
+            await refreshState();
+            const label = {taken:'Đã uống', missed:'Bỏ lỡ', clear:'Xóa'}[status] || status;
+            log(`📋 ${SLOT_NAMES[slot]} ${dateISO}: ${label}`, 'info');
+        }
+    } catch(e) {
+        log(`❌ Lỗi đánh dấu: ${e.message}`, 'err');
+    }
+}
+
+// ─── Helpers ──────────────────────────────────────────────────
+function getBroker() {
+    return {
+        broker: document.getElementById('broker-ip').value.trim(),
+        port:   parseInt(document.getElementById('broker-port').value) || 1883,
+    };
+}
+
+function ts() { return new Date().toLocaleTimeString('vi-VN', {hour12: false}); }
+
+function log(msg, type = 'info') {
+    const box = document.getElementById('log');
+    const div = document.createElement('div');
+    div.className = `log-entry ${type}`;
+    div.innerHTML = `<span class="ts">[${ts()}]</span><span class="msg">${msg}</span>`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+    addSidebarEntry(msg, type);
+}
+
+function clearLog() { document.getElementById('log').innerHTML = ''; }
+
+function addSidebarEntry(msg, type) {
+    const box = document.getElementById('sidebar-log');
+    const dotCls = type === 'ok' ? 'ok' : type === 'err' ? 'err' : 'warn';
+    const div = document.createElement('div');
+    div.className = 'alert-item';
+    div.innerHTML = `<div class="adot ${dotCls}"></div>
+        <div><div style="font-size:.78rem">${msg.replace(/[✅❌⚠️📋]/g,'').trim()}</div>
+        <div class="al-time">${ts()}</div></div>`;
+    box.prepend(div);
+    while (box.children.length > 8) box.removeChild(box.lastChild);
+}
+
+function setBadge(ok) {
+    document.getElementById('conn-dot').className = `status-dot ${ok ? '' : 'off'}`;
+    document.getElementById('conn-lbl').textContent = ok ? 'Lệnh gửi thành công' : 'Lỗi kết nối';
+}
+
+function setChip(id, text, ok) {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className   = `chip ${ok ? 'g' : 'r'}`;
+}
+
+// ─── FAB / Modal ──────────────────────────────────────────────
+let fabOpen = false;
+function toggleFab() {
+    fabOpen = !fabOpen;
+    document.getElementById('fab-main').classList.toggle('open', fabOpen);
+    document.getElementById('fab-subs').classList.toggle('open', fabOpen);
+}
+function closeFab() { if (fabOpen) toggleFab(); }
+function openModal(name) { closeFab(); document.getElementById(`overlay-${name}`).classList.add('show'); }
+function closeModal(name){ document.getElementById(`overlay-${name}`).classList.remove('show'); }
+document.querySelectorAll('.overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target === el) el.classList.remove('show'); });
+});
+function onRtcMode() {
+    const m = document.querySelector('input[name="rtc-mode"]:checked').value;
+    document.getElementById('rtc-manual').style.display = m === 'manual' ? 'block' : 'none';
+}
+
+// ─── API call ─────────────────────────────────────────────────
+async function callApi(url, body, btnId, defaultLabel) {
+    const btn = document.getElementById(btnId);
+    btn.classList.add('loading');
+    btn.textContent = 'Đang gửi...';
+    try {
+        const res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) });
+        return await res.json();
+    } catch(e) {
+        return { success: false, error: `Flask không phản hồi: ${e.message}` };
+    } finally {
+        btn.classList.remove('loading');
+        btn.textContent = defaultLabel;
+    }
+}
+
+// ─── Send actions ─────────────────────────────────────────────
+async function sendRtc() {
+    const mode = document.querySelector('input[name="rtc-mode"]:checked').value;
+    const body = { ...getBroker() };
+    if (mode === 'auto') {
+        body.auto = true;
+    } else {
+        const val = document.getElementById('rtc-time').value;
+        if (!val) { alert('Vui lòng nhập thời gian!'); return; }
+        const [h,m,s] = val.split(':');
+        body.hour = +h; body.minute = +m; body.second = +(s||0);
+    }
+    closeModal('rtc');
+    log('Gửi lệnh cập nhật RTC...', 'send');
+    const d = await callApi('/api/rtc', body, 'btn-rtc', 'Gửi lệnh');
+    if (d.success) { log(`✅ RTC OK — ${d.payload}`, 'ok'); setBadge(true); setChip('stat-rtc', d.payload, true); }
+    else           { log(`❌ Lỗi RTC: ${d.error}`, 'err'); setBadge(false); setChip('stat-rtc', 'Lỗi', false); }
+}
+
+async function sendSchedule() {
+    const slot = +document.getElementById('sch-slot').value;
+    const val  =  document.getElementById('sch-time').value;
+    if (!val) { alert('Vui lòng nhập giờ uống!'); return; }
+    const [h, m] = val.split(':').map(Number);
+    const body = { ...getBroker(), slot, hour: h, minute: m };
+    closeModal('schedule');
+    log(`Gửi lịch Slot ${slot} → ${pad2(h)}:${pad2(m)}`, 'send');
+    const d = await callApi('/api/schedule', body, 'btn-sch', 'Gửi lệnh');
+    if (d.success) {
+        log(`✅ Schedule OK — ${d.payload}`, 'ok');
+        setBadge(true); setChip('stat-sch', d.payload, true);
+        await refreshState();
+    } else {
+        log(`❌ Lỗi Schedule: ${d.error}`, 'err');
+        setBadge(false); setChip('stat-sch', 'Lỗi', false);
+    }
+}
+
+async function sendTare() {
+    const body = getBroker();
+    closeModal('tare');
+    log('Gửi lệnh TARE cân...', 'send');
+    const d = await callApi('/api/tare', body, 'btn-tare', 'Xác nhận Tare');
+    if (d.success) { log('✅ TARE OK — kiểm tra màn hình ESP32', 'ok'); setBadge(true); setChip('stat-tare', 'TARE sent', true); }
+    else           { log(`❌ Lỗi TARE: ${d.error}`, 'err'); setBadge(false); setChip('stat-tare', 'Lỗi', false); }
+}
+
+// ─── State refresh ────────────────────────────────────────────
+async function refreshState() {
+    try {
+        const res  = await fetch('/api/state');
+        const data = await res.json();
+        appState = data;
+        if (data.mqtt) updateSubUI(data.mqtt);
+        renderCalendar();
+    } catch(e) {
+        console.warn('refreshState failed:', e);
+    }
+}
+
+// ─── Init ─────────────────────────────────────────────────────
+refreshState();
+log('SmartPilBox Control Panel khởi động. SSE đang lắng nghe real-time...', 'info');
+// Fallback poll 60 s — xử lý pending→missed tự động khi không có MQTT event
+setInterval(renderCalendar, 60_000);
+</script>
+</body>
+</html>
