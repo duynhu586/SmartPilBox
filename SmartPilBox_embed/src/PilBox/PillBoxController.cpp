@@ -13,6 +13,7 @@ PillBoxController::PillBoxController() :
     stateTimer(0), 
     scheduleTriggeredToday(false),
     lastCheckedMinute(-1),
+    lastSerialLogTime(0),
     alarmHour(SCHEDULE_HOUR),     // Giờ ban đầu
     alarmMinute(SCHEDULE_MINUTE)  // Phút ban đầu
 {
@@ -179,27 +180,29 @@ void PillBoxController::update() {
         case IDLE: 
             for (int i = 0; i < MAX_SCHEDULES; i++) {
                 if (!schedules[i].completedToday && now.hour() == schedules[i].hour && now.minute() == schedules[i].minute) {
-                    triggerAlarmSequence(i); // <-- Gom logic kích hoạt chuông / mở chốt / đọc cân nặng nền
+                    triggerAlarmSequence(i);
                     break; 
                 }
             }
 
             if (currentState == IDLE) {
                 snprintf(timeStr, sizeof(timeStr), "Time: %02d:%02d:%02d", now.hour(), now.minute(), now.second());
-                oled.displayStatus("  SYSTEM READY", timeStr, getNextScheduleStr().c_str()); // <-- Gom logic lấy lịch tiếp theo hiển thị lên OLED
-                
-                // Ghi log trạng thái hệ thống ra cổng Serial Monitor định kỳ theo mỗi giây
-                Serial.printf("\n=========================================\n");
-                Serial.printf("[RTC NOW] Thời gian thực: %02d:%02d:%02d\n", now.hour(), now.minute(), now.second());
-                Serial.println("-----------------------------------------");
-                Serial.println("[SCHEDULES] Danh sách lịch hẹn trong máy:");
-                for (int i = 0; i < MAX_SCHEDULES; i++) {
-                    Serial.printf("  -> Slot [%d]: %02d:%02d | Trạng thái: %s\n", 
-                                  i, schedules[i].hour, schedules[i].minute, 
-                                  schedules[i].completedToday ? "ĐÃ UỐNG ĐỦ" : "CHƯA UỐNG");
+                oled.displayStatus("  SYSTEM READY", timeStr, getNextScheduleStr().c_str());
+
+                // In log Serial mỗi 1 giây nhưng KHÔNG dùng delay() để không block luồng MQTT
+                if (millis() - lastSerialLogTime >= 1000) {
+                    lastSerialLogTime = millis();
+                    Serial.printf("\n=========================================\n");
+                    Serial.printf("[RTC NOW] Thời gian thực: %02d:%02d:%02d\n", now.hour(), now.minute(), now.second());
+                    Serial.println("-----------------------------------------");
+                    Serial.println("[SCHEDULES] Danh sách lịch hẹn trong máy:");
+                    for (int i = 0; i < MAX_SCHEDULES; i++) {
+                        Serial.printf("  -> Slot [%d]: %02d:%02d | Trạng thái: %s\n", 
+                                      i, schedules[i].hour, schedules[i].minute, 
+                                      schedules[i].completedToday ? "ĐÃ UỐNG ĐỦ" : "CHƯA UỐNG");
+                    }
+                    Serial.printf("=========================================\n");
                 }
-                Serial.printf("=========================================\n");
-                delay(1000); 
             }
             break;
 

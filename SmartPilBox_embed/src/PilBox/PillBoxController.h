@@ -50,6 +50,7 @@ private:
     unsigned long stateTimer;
     bool scheduleTriggeredToday;
     int lastCheckedMinute;
+    unsigned long lastSerialLogTime; // Timer non-blocking cho việc in log Serial ở IDLE
 
     int alarmHour;
     int alarmMinute;
